@@ -20,75 +20,54 @@ License
     along with OpenFOAM; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
+Class
+    gmshViewPointMeshMotion
+
 Description
-    Converts polyMesh to Gmsh mesh structure.
+    Reads an OpenFOAM pointMesh motion and converts to a Gmsh View.
 
 SourceFiles
-    polyMeshToGmsh.C
+    gmshViewPointMeshMotion.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef polyMeshToGmsh_H
-#define polyMeshToGmsh_H
+#ifndef gmshViewPointMeshMotion_H
+#define gmshViewPointMeshMotion_H
 
-#include "polyMesh.H"
-#include "cellModeller.H"
-#ifdef cygwin
-#include "Time.hh"
-#else
-#include "Time.H"
-#endif
+#include "gmshViewPointMesh.H"
 
 namespace Foam
 {
 
-class polyMeshToGmsh
-:
-    public polyMesh
+template <class T1>
+class gmshViewPointMeshMotion
+: public gmshViewPointMesh<T1, vector>
 {
-    // Private data
+    // Reference to the mesh
+    const fvMesh& mesh_;
+
+    // Reference to the views
+    const gmshViews& views_;
+
+    // Reference to the field type
+    const label& fieldType_;
+
+    // Reference to the runTime object
+    Time& runTime_;
 
     // Verbosity
     const label verbosity_;
 
-    // number of zone faces
-    label nZoneFaces_, faceZoneI_, zoneFaceI_;
-
-    // current physical name
-    label physicalNameI_;
-
-    // current vertex
-    label vertexI_;
-
-    // current element
-    label elementI_;
-
-    // processor No
-    label myProcNo_;
-
-    // processor No converted to string
-    string myProcNoStr_;
-
-    // number of total physical groups
-    static label totalPhysicals_;
+    void writePointMotions(char *values, pointField& meshMotion,
+    const label timeI) const;
 
 public:
-
     // Constructor
-    polyMeshToGmsh(const IOobject& io, const label verbosity);
+    gmshViewPointMeshMotion(const gmshViews& views, const word& fieldName,
+    Time& runTime, const fvMesh& mesh, const label verbosity);
 
-    // Destructor
-    ~polyMeshToGmsh() { totalPhysicals_ += physicalNameI_; }
-
-    label getNNames();
-    label getNVerts() { return nPoints(); }
-    label getNElems();
-    void getPhysicalName(int& num, char name[]);
-    void getVertex(int& num, double& x, double& y, double& z);
-    void getElementAttributes(int& num, int& type, int& physical,
-    int& elementary, int& partition) const;
-    void getElementVerticesIndices(int indices[]);
-    void writeGmshMesh();
+    // Member functions
+    virtual void getViewData(gmshViewBase::gmshViewBuffer& vB) const;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

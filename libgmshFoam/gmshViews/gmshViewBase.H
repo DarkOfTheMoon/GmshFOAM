@@ -35,6 +35,8 @@ SourceFiles
 #ifndef gmshViewBase_H
 #define gmshViewBase_H
 
+#include "gmshFoamConfig.H"
+
 #ifdef cygwin
 #include "Time.hh"
 #else
@@ -101,6 +103,23 @@ protected:
 
     const label verbosity_;
 
+    // Private member functions
+    inline const scalar& component(const scalar& s, const label componentI)
+        const { return s; }
+    inline const scalar& component(const vector& v, const label componentI)
+        const { return v[componentI]; }
+    inline const scalar& component(const tensor& t, const label componentI)
+        const { return t[componentI]; }
+
+#if WITH_SYMMTENSOR
+    inline const scalar& component(const symmTensor& t, const label componentI)
+        const
+    {
+        static label tab[] = {0, 1, 2, 1, 3, 4, 2, 4, 5};
+        return t[tab[componentI]];
+    }
+#endif
+
 public:
     // Constructor
     gmshViewBase(const gmshViews& views, const word& fieldName, Time& runTime,
@@ -114,17 +133,15 @@ public:
 
     // Pure virtual functions
     virtual const enum meshTypes meshType() const = 0;
-
     virtual void getPostFormat(gmshPostFormat& pF) const = 0;
-    virtual void getViewHeader(gmshViewHeader& vH) const = 0;
     virtual void getTimeStepValues(char *tB) const = 0;
+    virtual void getViewHeader(gmshViewHeader& vH) const = 0;
     virtual void getViewData(gmshViewBuffer& vB) const = 0;
-    virtual void write(const fileName& name, const gmshPostFormat& pF,
-    const gmshViewHeader& vH, const char *tB, const gmshViewBuffer &vB) const
-        = 0;
 
     // Member functions
     void getViewSize(const gmshViewHeader& vH, label vSize[]) const;
+    void write(const fileName& name, const gmshPostFormat& pF,
+    const gmshViewHeader& vH, const char *tB, const gmshViewBuffer &vB) const;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

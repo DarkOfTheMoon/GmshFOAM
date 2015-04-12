@@ -23,39 +23,70 @@ License
 Description
     Reads an OpenFOAM pointMesh field and converts to a Gmsh View.
 
-    The coding is still unfinished. This file is considered as a scratch file.
-
 \*---------------------------------------------------------------------------*/
 
 #include "pointFields.H"
+#include "gmshMessageStream.H"
+#include "gmshViewPointMesh.H"
+#include "gmshViews.H"
 
-template <>
-gmshView<double, vector, pointMesh>
-::gmshView(const gmshViews& views, const word& fieldName, Time& runTime,
-const fvMesh& mesh, const label verbosity)
-    : gmshViewBase(views, fieldName, runTime, verbosity), mesh_(mesh)
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+namespace Foam
 {
 
-    const word& typeName
-        = GeometricField<double, pointPatchField, pointMesh>::typeName;
+// * * * * * * * * * * * * * * * * Static data * * * * * * * * * * * * * * * //
 
-    if(typeName == "pointScalarField" || typeName == "pointVectorField"
-    || typeName == "pointTensorField")
-    {
-        meshType_ = typePointMesh;
-    }
-    else
-    {
-        // usually this should not happen
-        gSeriousError(verbosity_ >= 1) << "Unhandled field type; type = "
-            << typeName << endl;
-    }
+template <class T1, class T2>
+const label gmshViewPointMesh<T1, T2>
+::fieldType_ = (sizeof(T2) / sizeof(scalar) == 6
+    ? 9 : sizeof(T2) / sizeof(scalar)); // treat a SymmTensor as a Tensor
 
+template <class T1, class T2>
+const label gmshViewPointMesh<T1, T2>
+::geoOffset_ = (gmshViewPointMesh<T1, T2>::fieldType_ == 1 ? 0
+: (gmshViewPointMesh<T1, T2>::fieldType_ == 3 ? 1 : 2));
+
+template <class T1, class T2>
+const gmshViewBase::meshTypes gmshViewPointMesh<T1, T2>
+::meshType_ = gmshViewBase::typePointMesh;
+
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+template <class T1, class T2>
+gmshViewPointMesh<T1, T2>
+::gmshViewPointMesh(const gmshViews& views, const word& fieldName,
+Time& runTime, const fvMesh& mesh, const label verbosity)
+    : gmshViewBase(views, fieldName, runTime, verbosity), mesh_(mesh)
+{
     gInfo(verbosity_ >= 3) << endl << "Reading " << fieldName << endl;
 }
 
-template <class T1, class T2, class T4>
-void gmshView<T1, T2, T4>
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+template <class T1, class T2>
+void gmshViewPointMesh<T1, T2>
+::getPostFormat(gmshViewBase::gmshPostFormat& pF) const
+{
+    pF.version = 1.4;
+    pF.format = 1; // 0: ASCII, 1: binary
+    pF.size = sizeof(T1);
+}
+
+template <class T1, class T2>
+void gmshViewPointMesh<T1, T2>
+::getTimeStepValues(char *tB) const
+{
+    for(label curTime = views_.startTime(); curTime <= views_.endTime();
+        curTime++)
+    {
+        reinterpret_cast<T1*>(tB)[curTime - views_.startTime()]
+            = views_.timeList()[curTime].value();
+    }
+}
+
+template <class T1, class T2>
+void gmshViewPointMesh<T1, T2>
 ::getViewHeader(gmshViewBase::gmshViewHeader& vH) const
 {
     strncpy(vH.name, fieldName_.c_str(), 255);
@@ -67,28 +98,15 @@ void gmshView<T1, T2, T4>
         vH.Nb[typeI] = 0;
     }
 
-    const static label type = sizeof(T2) / sizeof(scalar);
-    const static label offset = (type == 1 ? 0 : (type == 3 ? 1 : 2));
-
-    if(meshType_ == typePointMesh)
-    {
-        vH.Nb[SP + offset] = mesh_.points().size();
-        //vH.Nb[ST + offset] = nPatchTris;
-        //vH.Nb[SQ + offset] = nPatchQuads;
-    }
+    vH.Nb[SP + geoOffset_] = mesh_.points().size();
 
     vH.NbT2 = 0; vH.t2l = 0; vH.NbT3 = 0; vH.t3l = 0;
 }
 
-template <class T1, class T2, class T4>
-void gmshView<T1, T2, T4>
+template <class T1, class T2>
+void gmshViewPointMesh<T1, T2>
 ::writePointPoints(char *p) const
 {
-    if(meshType_ != typePointMesh)
-    {
-        return;
-    }
-
     forAll(mesh_.points(), pointI)
     {
         const label pI = pointI * (views_.nTimeSteps() * fieldType_ + 3);
@@ -99,12 +117,31 @@ void gmshView<T1, T2, T4>
     }
 }
 
-template <>
-void gmshView<double, vector, pointMesh>
+template <class T1, class T2>
+void gmshViewPointMesh<T1, T2>
+::writePointValues(char *values,
+const GeometricField<T2, pointPatchField, pointMesh>& field, const label timeI)
+    const
+{
+    forAll(mesh_.points(), pointI)
+    {
+        const label idx = pointI * (views_.nTimeSteps() * fieldType_ + 3)
+            + (timeI * fieldType_ + 3);
+        for(label componentI = 0; componentI < fieldType_; componentI++)
+        {
+            reinterpret_cast<T1*>(values)[idx + componentI]
+                =  component(field[pointI], componentI);
+        }
+    }
+}
+
+template <class T1, class T2>
+void gmshViewPointMesh<T1, T2>
 ::getViewData(gmshViewBase::gmshViewBuffer& vB) const
 {
-    writePointPoints(vB.buf[VP]);
+    writePointPoints(vB.buf[SP + geoOffset_]);
 
+    const pointMesh pMesh(mesh_);
     for(label curTime = views_.startTime(); curTime <= views_.endTime();
         curTime++)
     {
@@ -116,31 +153,57 @@ void gmshView<double, vector, pointMesh>
 
         runTime_.setTime(views_.timeList()[curTime], curTime);
 
-        IOobject fieldObject(fieldName_, runTime_.timeName(), mesh_,
-        IOobject::READ_IF_PRESENT, IOobject::AUTO_WRITE);
-
-        pointMesh pMesh(mesh_);
-        GeometricField<vector, pointPatchField, pointMesh>
-            field(fieldObject, pMesh,
+        IOobject* fieldObjectPtr = NULL;
+        GeometricField<T2, pointPatchField, pointMesh>* fieldPtr = NULL;
+        try
+        {
+            fieldObjectPtr = new IOobject(fieldName_, runTime_.timeName(),
+            mesh_, IOobject::READ_IF_PRESENT, IOobject::NO_WRITE);
+            fieldPtr = new GeometricField<T2, pointPatchField, pointMesh>
+            (*fieldObjectPtr, pMesh,
             dimensionSet(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
+        }
+        catch(error& e)
+        {
+            delete fieldObjectPtr;
+            delete fieldPtr;
+            gSeriousError(verbosity_ >= 1) << e.message().c_str()
+                << " at t = " << runTime_.timeName()
+                << ". Treating the field values as all zero." << endl;
+            continue;
+        }
+        IOobject& fieldObject = *fieldObjectPtr;
+        GeometricField<T2, pointPatchField, pointMesh>& field = *fieldPtr;
+
         if(!fieldObject.headerOk())
         {
             field = pTraits<T2>::zero;
-            gSeriousError(verbosity_ >= 1) << "Field " << fieldName_
+            gWarning(verbosity_ >= 1) << "Field " << fieldName_
                 << " not found at t = " << runTime_.timeName()
                 << ". Treating the field values as all zero." << endl;
         }
 
         const label timeI = curTime - views_.startTime();
 
-        writePointValues(vB.buf[VP], field, timeI);
+        writePointValues(vB.buf[SP + geoOffset_], field, timeI);
+
+        delete fieldPtr;
+        delete fieldObjectPtr;
     }
 }
 
 // * * * * * * * * * * * * * * * * Instantiators * * * * * * * * * * * * * * //
 
+// double precision Gmsh view / pointScalarField
+template class gmshViewPointMesh<double, scalar>;
 // double precision Gmsh view / pointVectorField
-template class gmshView<double, vector, pointMesh>;
+template class gmshViewPointMesh<double, vector>;
+#if WITH_SYMMTENSOR
+// double precision Gmsh view / pointSymmTensorField
+template class gmshViewPointMesh<double, symmTensor>;
+#endif
+// double precision Gmsh view / pointTensorField
+template class gmshViewPointMesh<double, tensor>;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

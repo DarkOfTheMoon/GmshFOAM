@@ -21,27 +21,27 @@ License
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
 Class
-    gmshViewMeshMotion
+    gmshViewVolMeshMotion
 
 Description
-    Reads an OpenFOAM mesh motion and converts to a Gmsh View.
+    Reads an OpenFOAM volMesh motion and converts to a Gmsh View.
 
 SourceFiles
-    gmshViewMeshMotion.C
+    gmshViewVolMeshMotion.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef gmshViewMeshMotion_H
-#define gmshViewMeshMotion_H
+#ifndef gmshViewVolMeshMotion_H
+#define gmshViewVolMeshMotion_H
 
-#include "gmshView.H"
+#include "gmshViewVolMesh.H"
 
 namespace Foam
 {
 
-template <class T1, class T4>
-class gmshViewMeshMotion
-: public gmshView<T1, vector, T4>
+template <class T1>
+class gmshViewVolMeshMotion
+: public gmshViewVolMesh<T1, vector>
 {
     // Reference to the mesh
     const fvMesh& mesh_;
@@ -52,26 +52,21 @@ class gmshViewMeshMotion
     // Reference to the field type
     const label& fieldType_;
 
-    // Reference to the mesh type
-    const enum gmshViewBase::meshTypes& meshType_;
-
     // Reference to the runTime object
     Time& runTime_;
 
     // Verbosity
     const label verbosity_;
 
-    void writeFaceMotions(char *values, const DynamicList<label>& shapeFaces,
-    pointField& meshMotion, const label timeI) const;
     void writeCellMotions(char *values, const labelList& shapeCells,
     pointField& meshMotion, const label timeI) const;
     void writePatchMotions(char *values,
     const List<DynamicList<label> >& shapeFaces, const pointField& meshMotion,
-    const label timeI, const label faceOffset) const;
+    const label timeI) const;
 
 public:
     // Constructor
-    gmshViewMeshMotion(const gmshViews& views, const word& fieldName,
+    gmshViewVolMeshMotion(const gmshViews& views, const word& fieldName,
     Time& runTime, const fvMesh& mesh, const label verbosity);
 
     // Member functions

@@ -75,7 +75,8 @@ private:
     label fieldI_;
     label meshTimeI_;
     bool isMeshMotion_;
-    bool isVolMeshMotionDone_, isSurfaceMeshMotionDone_;
+    bool isVolMeshMotionDone_, isSurfaceMeshMotionDone_,
+        isPointMeshMotionDone_;
     label  motionClassI_;
 
     gmshViewBase *gV_;

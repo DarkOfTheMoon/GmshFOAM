@@ -21,18 +21,19 @@ License
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
 Description
-    Reads an OpenFOAM field and converts to a Gmsh View.
+    Reads an OpenFOAM surfaceMesh motion and converts to a Gmsh View.
 
 \*---------------------------------------------------------------------------*/
 
 #include "OFstream.H"
-#include "volFields.H"
 #include "surfaceFields.H"
-#include "pointFields.H"
+#if WITH_FVSPATCHFIELD
+#include "fvsPatchField.H"
+#else
 #include "fvPatchField.H"
-
+#endif
 #include "gmshMessageStream.H"
-#include "gmshViewMeshMotion.H"
+#include "gmshViewSurfaceMeshMotion.H"
 #include "gmshViews.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -42,30 +43,24 @@ namespace Foam
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-template <class T1, class T4>
-gmshViewMeshMotion<T1, T4>
-::gmshViewMeshMotion(const gmshViews& views, const word& fieldName,
+template <class T1>
+gmshViewSurfaceMeshMotion<T1>
+::gmshViewSurfaceMeshMotion(const gmshViews& views, const word& fieldName,
 Time& runTime, const fvMesh& mesh, const label verbosity)
-    :gmshView<T1, vector, T4>(views, fieldName, runTime, mesh, verbosity),
-     mesh_(mesh), views_(views),
-     fieldType_(gmshView<T1, vector, T4>::fieldType_),
-     meshType_(gmshView<T1, vector, T4>::meshType_), runTime_(runTime),
-     verbosity_(verbosity)
+    :gmshViewSurfaceMesh<T1, vector>(views, fieldName, runTime, mesh,
+    verbosity), mesh_(mesh), views_(views),
+     fieldType_(gmshViewSurfaceMesh<T1, vector>::fieldType_),
+     runTime_(runTime), verbosity_(verbosity)
 {}
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-template <class T1, class T4>
-void gmshViewMeshMotion<T1, T4>
+template <class T1>
+void gmshViewSurfaceMeshMotion<T1>
 ::writeFaceMotions(char *values, const DynamicList<label>& shapeFaces,
 pointField& meshMotion, const label timeI)
     const
 {
-    if(meshType_ != gmshViewBase::typeSurfaceMesh || fieldType_ != 3)
-    {
-        return;
-    }
-
     forAll(shapeFaces, faceI)
     {
         const face& f = mesh_.faces()[shapeFaces[faceI]];
@@ -86,49 +81,12 @@ pointField& meshMotion, const label timeI)
     }
 }
 
-template <class T1, class T4>
-void gmshViewMeshMotion<T1, T4>
-::writeCellMotions(char *values, const labelList& shapeCells,
-pointField& meshMotion, const label timeI) const
-{
-    if(meshType_ != gmshViewBase::typeVolMesh || fieldType_ != 3)
-    {
-        return;
-    }
-
-    forAll(shapeCells, cellI)
-    {
-        const cellShape& c = mesh_.cellShapes()[shapeCells[cellI]];
-        label nP = c.size();
-        label idx1 = cellI * nP * (views_.nTimeSteps() * fieldType_ + 3)
-            + nP * (timeI * fieldType_ + 3);
-
-        for(label pointI = 0; pointI < nP; pointI++)
-        {
-            const label idx2 = idx1 + pointI * fieldType_;
-
-            for(label componentI = 0; componentI < fieldType_; componentI++)
-            {
-                reinterpret_cast<T1*>(values)[idx2 + componentI]
-                    =  component(meshMotion[c[pointI]], componentI);
-            }
-        }
-    }
-}
-
-template <class T1, class T4>
-void gmshViewMeshMotion<T1, T4>
+template <class T1>
+void gmshViewSurfaceMeshMotion<T1>
 ::writePatchMotions(char *values, const List<DynamicList<label> >& shapeFaces,
 const pointField& meshMotion, const label timeI, const label faceOffset)
     const
 {
-    if((meshType_ != gmshViewBase::typeVolMesh
-       && meshType_ != gmshViewBase::typeSurfaceMesh)
-    || fieldType_ != 3)
-    {
-        return;
-    }
-
     label faceI = faceOffset;
 
     forAll(shapeFaces, patchI)
@@ -157,41 +115,23 @@ const pointField& meshMotion, const label timeI, const label faceOffset)
     }
 }
 
-template <class T1, class T4>
-void gmshViewMeshMotion<T1, T4>
+template <class T1>
+void gmshViewSurfaceMeshMotion<T1>
 ::getViewData(gmshViewBase::gmshViewBuffer& vB) const
 {
-    if(fieldType_ != 3)
-    {
-        gSeriousError(verbosity_ >= 1) << "unsupported template instance for"
-            "handling mesh motions. fieldType = " << fieldType_ << endl;
-        return;
-    }
-
     pointField meshMotion(mesh_.points().size(), vector::zero);
 
-    gmshView<T1, vector, T4>::
+    gmshViewSurfaceMesh<T1, vector>::
         writeFacePoints(vB.buf[gmshViewBase::VT], views_.tris());
-    gmshView<T1, vector, T4>::
+    gmshViewSurfaceMesh<T1, vector>::
         writeFacePoints(vB.buf[gmshViewBase::VQ], views_.quads());
 
-    gmshView<T1, vector, T4>::
-        writeCellPoints(vB.buf[gmshViewBase::VS], views_.tets());
-    gmshView<T1, vector, T4>::
-        writeCellPoints(vB.buf[gmshViewBase::VH], views_.hexes());
-    gmshView<T1, vector, T4>::
-        writeCellPoints(vB.buf[gmshViewBase::VI], views_.prisms());
-    gmshView<T1, vector, T4>::
-        writeCellPoints(vB.buf[gmshViewBase::VY], views_.pyrs());
-
-    gmshView<T1, vector, T4>::
+    gmshViewSurfaceMesh<T1, vector>::
         writePatchPoints(vB.buf[gmshViewBase::VT], views_.patchTris(),
-        (meshType_ == gmshViewBase::typeSurfaceMesh
-        ? views_.tris().size() : 0));
-    gmshView<T1, vector, T4>::
+        views_.tris().size());
+    gmshViewSurfaceMesh<T1, vector>::
         writePatchPoints(vB.buf[gmshViewBase::VQ], views_.patchQuads(),
-        (meshType_ == gmshViewBase::typeSurfaceMesh
-        ? views_.quads().size() : 0));
+        views_.quads().size());
 
     for(label curTime = views_.startTime(); curTime <= views_.endTime();
         curTime++)
@@ -203,16 +143,27 @@ void gmshViewMeshMotion<T1, T4>
         gInfo(verbosity_ >= 4) << endl;
 
         runTime_.setTime(views_.timeList()[curTime], curTime);
-        IOobject ioPoints("points", runTime_.timeName(), polyMesh::typeName,
-        mesh_, IOobject::MUST_READ, IOobject::NO_WRITE);
-        if(ioPoints.headerOk())
-        {
-            gInfo(verbosity_ >= 4)
-                << "        Applying mesh movement at t = "
-                << views_.timeList()[curTime].name() << endl;
 
-            pointIOField newPoints(ioPoints);
-            meshMotion = newPoints - mesh_.points();
+        try
+        {
+            IOobject ioPoints("points", runTime_.timeName(),
+            polyMesh::typeName, mesh_, IOobject::MUST_READ,
+            IOobject::NO_WRITE);
+
+            if(ioPoints.headerOk())
+            {
+                gInfo(verbosity_ >= 4)
+                    << "        Applying mesh movement at t = "
+                    << views_.timeList()[curTime].name() << endl;
+
+                pointIOField newPoints(ioPoints);
+                meshMotion = newPoints - mesh_.points();
+            }
+        }
+        catch(error& e)
+        {
+            gSeriousError(verbosity_ >= 1) << e.message().c_str() << endl;
+            // treat point locations same as the ones in previous timestep
         }
 
         const label timeI = curTime - views_.startTime();
@@ -222,30 +173,17 @@ void gmshViewMeshMotion<T1, T4>
         writeFaceMotions(vB.buf[gmshViewBase::VQ], views_.quads(), meshMotion,
         timeI);
 
-        writeCellMotions(vB.buf[gmshViewBase::VS], views_.tets(), meshMotion,
-        timeI);
-        writeCellMotions(vB.buf[gmshViewBase::VH], views_.hexes(), meshMotion,
-        timeI);
-        writeCellMotions(vB.buf[gmshViewBase::VI], views_.prisms(), meshMotion,
-        timeI);
-        writeCellMotions(vB.buf[gmshViewBase::VY], views_.pyrs(), meshMotion,
-        timeI);
-
         writePatchMotions(vB.buf[gmshViewBase::VT], views_.patchTris(),
-        meshMotion, timeI, (meshType_ == gmshViewBase::typeSurfaceMesh
-        ? views_.tris().size() : 0));
+        meshMotion, timeI, views_.tris().size());
         writePatchMotions(vB.buf[gmshViewBase::VQ], views_.patchQuads(),
-        meshMotion, timeI, (meshType_ == gmshViewBase::typeSurfaceMesh
-        ? views_.quads().size() : 0));
+        meshMotion, timeI, views_.quads().size());
     }
 }
 
 // * * * * * * * * * * * * * * * * Instantiators * * * * * * * * * * * * * * //
 
-// double precision Gmsh view / volMesh
-template class gmshViewMeshMotion<double, volMesh>;
 // double precision Gmsh view / surfaceMesh
-template class gmshViewMeshMotion<double, surfaceMesh>;
+template class gmshViewSurfaceMeshMotion<double>;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

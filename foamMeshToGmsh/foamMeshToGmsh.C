@@ -25,6 +25,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
+#include "gmshFoamConfig.H"
+
 #include "argList.H"
 
 #include "gmshMessageStream.H"
@@ -42,7 +44,15 @@ int main(int argc, char *argv[])
     "verbosity (0-5; defaults to 3)");
 
 #   include "setRootCase.H"
+
+    gInfo << endl;
+
+#if WITH_NOREAD_TIME_CTOR
+    // with this Time object mesh can be written without system/ subdirectory
+    Time runTime(args.rootPath(), args.caseName());
+#else
 #   include "createTime.H"
+#endif
 
     label verbosity = 3; // along with the gmsh default setting of 3
     if(args.options().found("verbosity"))

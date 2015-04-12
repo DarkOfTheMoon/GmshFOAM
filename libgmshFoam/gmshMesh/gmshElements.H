@@ -49,7 +49,7 @@ class gmshElements
         bool isHandled_;
         label nVerts_;
         const cellModel* cellModel_;
-        char *name_;
+        string name_;
     };
     const static struct elementTypes elemTab_[];
     const static label maxNVerts;

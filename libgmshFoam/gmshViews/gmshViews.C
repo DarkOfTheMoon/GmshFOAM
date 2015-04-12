@@ -31,8 +31,12 @@ Description
 #include "processorPolyPatch.H"
 
 #include "gmshViews.H"
-#include "gmshView.H"
-#include "gmshViewMeshMotion.H"
+#include "gmshViewPointMesh.H"
+#include "gmshViewPointMeshMotion.H"
+#include "gmshViewSurfaceMesh.H"
+#include "gmshViewSurfaceMeshMotion.H"
+#include "gmshViewVolMesh.H"
+#include "gmshViewVolMeshMotion.H"
 #include "gmshMessageStream.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -42,11 +46,26 @@ namespace Foam
 
 // * * * * * * * * * * * * * * * * Static data   * * * * * * * * * * * * * * //
 
-static const char *fieldClasses[]
-= {"volScalarField", "volVectorField", "volTensorField",
-   "surfaceScalarField", "surfaceVectorField", "surfaceTensorField"};
+#if WITH_SYMMTENSOR
 
-const wordListFromCharArray gmshViews::fieldClasses_(6, fieldClasses);
+static const char *fieldClasses[]
+= {"volScalarField", "volVectorField", "volSymmTensorField", "volTensorField",
+   "surfaceScalarField", "surfaceVectorField", "surfaceSymmTensorField",
+   "surfaceTensorField", "pointScalarField", "pointVectorField",
+   "pointSymmTensorField", "pointTensorField"};
+
+const wordListFromCharArray gmshViews::fieldClasses_(12, fieldClasses);
+
+#else
+
+static const char *fieldClasses[]
+= {"volScalarField", "volVectorField", "volTensorField", "surfaceScalarField",
+   "surfaceVectorField", "surfaceTensorField", "pointScalarField",
+   "pointVectorField", "pointTensorField"};
+
+const wordListFromCharArray gmshViews::fieldClasses_(9, fieldClasses);
+
+#endif
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -73,6 +92,7 @@ const fileName& caseName, const gmshViewsOptions& opt)
     isMeshMotion_(false),
     isVolMeshMotionDone_(false),
     isSurfaceMeshMotionDone_(false),
+    isPointMeshMotionDone_(false),
     motionClassI_(0),
     gV_(NULL),
     splitTimeStepsByMeshMotion_(opt.splitTimeStepsByMeshMotion_),
@@ -231,6 +251,41 @@ label gmshViews::findStartTime(bool& good, const gmshViewsOptions& opt)
         }
         if(good)
         {
+            // looks into another timestep for extra objects that
+            // usually don't exist at the initial timestep (e. g. phi).
+            if(timeI + 1 < timeList_.size())
+            {
+                const label timeJ = timeI + 1;
+                runTime_.setTime(timeList_[timeJ], timeJ);
+                IOobjectList objects(mesh_, runTime_.timeName());
+                forAll(fieldClasses_, classI)
+                {
+                    forAll(objects.names(fieldClasses_[classI]), fieldI)
+                    {
+                        const word field
+                            = objects.names(fieldClasses_[classI])[fieldI];
+                        bool found = false;
+                        forAll(fieldNames_[classI], fieldJ)
+                        {
+                            if(fieldNames_[classI][fieldJ] == field)
+                            {
+                                found = true;
+                            }
+                        }
+                        if(!found)
+                        {
+                            if(startClass_ > classI)
+                            {
+                                startClass_ = classI;
+                            }
+                            fieldNames_[classI]
+                                .setSize(fieldNames_[classI].size() + 1);
+                            fieldNames_[classI][fieldNames_[classI].size() - 1]
+                                = field;
+                        }
+                    }
+                }
+            }
             break;
         }
     }
@@ -412,32 +467,68 @@ gmshViewBase *gmshViews::getNextView()
 
     if(fieldClasses_[classI_] == "volScalarField")
     {
-        gV_ = new gmshView<double, scalar, volMesh>(*this,
+        gV_ = new gmshViewVolMesh<double, scalar>(*this,
         fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
     }
     else if(fieldClasses_[classI_] == "volVectorField")
     {
-        gV_ = new gmshView<double, vector, volMesh>(*this,
+        gV_ = new gmshViewVolMesh<double, vector>(*this,
         fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
     }
+#if WITH_SYMMTENSOR
+    else if(fieldClasses_[classI_] == "volSymmTensorField")
+    {
+        gV_ = new gmshViewVolMesh<double, symmTensor>(*this,
+        fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
+    }
+#endif
     else if(fieldClasses_[classI_] == "volTensorField")
     {
-        gV_ = new gmshView<double, tensor, volMesh>(*this,
+        gV_ = new gmshViewVolMesh<double, tensor>(*this,
         fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
     }
     else if(fieldClasses_[classI_] == "surfaceScalarField")
     {
-        gV_ = new gmshView<double, scalar, surfaceMesh>(*this,
+        gV_ = new gmshViewSurfaceMesh<double, scalar>(*this,
         fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
     }
     else if(fieldClasses_[classI_] == "surfaceVectorField")
     {
-        gV_ = new gmshView<double, vector, surfaceMesh>(*this,
+        gV_ = new gmshViewSurfaceMesh<double, vector>(*this,
         fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
     }
+#if WITH_SYMMTENSOR
+    else if(fieldClasses_[classI_] == "surfaceSymmTensorField")
+    {
+        gV_ = new gmshViewSurfaceMesh<double, symmTensor>(*this,
+        fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
+    }
+#endif
     else if(fieldClasses_[classI_] == "surfaceTensorField")
     {
-        gV_ = new gmshView<double, tensor, surfaceMesh>(*this,
+        gV_ = new gmshViewSurfaceMesh<double, tensor>(*this,
+        fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
+    }
+    else if(fieldClasses_[classI_] == "pointScalarField")
+    {
+        gV_ = new gmshViewPointMesh<double, scalar>(*this,
+        fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
+    }
+    else if(fieldClasses_[classI_] == "pointVectorField")
+    {
+        gV_ = new gmshViewPointMesh<double, vector>(*this,
+        fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
+    }
+#if WITH_SYMMTENSOR
+    else if(fieldClasses_[classI_] == "pointSymmTensorField")
+    {
+        gV_ = new gmshViewPointMesh<double, symmTensor>(*this,
+        fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
+    }
+#endif
+    else if(fieldClasses_[classI_] == "pointTensorField")
+    {
+        gV_ = new gmshViewPointMesh<double, tensor>(*this,
         fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
     }
     else
@@ -469,7 +560,7 @@ gmshViewBase *gmshViews::getNextMeshMotion()
         if(fieldClasses_[motionClassI_].substr(0, 3) == "vol"
         && fieldNames_[motionClassI_].size() && !isVolMeshMotionDone_)
         {
-            gV_ = new gmshViewMeshMotion<double, volMesh>(*this,
+            gV_ = new gmshViewVolMeshMotion<double>(*this,
             "volMeshMotion", runTime_, mesh_, verbosity_);
             isVolMeshMotionDone_ = true;
             motionClassI_++;
@@ -478,13 +569,25 @@ gmshViewBase *gmshViews::getNextMeshMotion()
         else if(fieldClasses_[motionClassI_].substr(0, 7) == "surface"
         && fieldNames_[motionClassI_].size() && !isSurfaceMeshMotionDone_)
         {
-            gV_ = new gmshViewMeshMotion<double, surfaceMesh>(*this,
+            gV_ = new gmshViewSurfaceMeshMotion<double>(*this,
             "surfaceMeshMotion", runTime_, mesh_, verbosity_);
             isSurfaceMeshMotionDone_ = true;
             motionClassI_++;
             return gV_;
         }
-        motionClassI_++;
+        else if(fieldClasses_[motionClassI_].substr(0, 5) == "point"
+        && fieldNames_[motionClassI_].size() && !isPointMeshMotionDone_)
+        {
+            gV_ = new gmshViewPointMeshMotion<double>(*this,
+            "pointMeshMotion", runTime_, mesh_, verbosity_);
+            isPointMeshMotionDone_ = true;
+            motionClassI_++;
+            return gV_;
+        }
+        else
+        {
+            motionClassI_++;
+        }
     }
 
     return NULL;

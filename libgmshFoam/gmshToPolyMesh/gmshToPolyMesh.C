@@ -131,7 +131,7 @@ const gmshToPolyMeshOptions& opt)
     return newMeshPtr;
 }
 
-void writePolyMeshWithSets(const polyMeshConversion& mesh, Time& runTime,
+bool writePolyMeshWithSets(const polyMeshConversion& mesh, Time& runTime,
 const gmshToPolyMeshOptions& opt)
 {
     gInfo(opt.verbosity_ >= 3) << endl
@@ -140,31 +140,40 @@ const gmshToPolyMeshOptions& opt)
     //Get polyMesh to write to constant
     runTime.setTime(instant(runTime.constant()), 0);
 
-    mesh.write();
-
-    if(mesh.cellZones().size() > 0)
+    try
     {
-        // Write the cellSets which has the same content as cellZones
-        forAll(mesh.cellZones(), zoneI)
+        mesh.write();
+
+        if(mesh.cellZones().size() > 0)
         {
-            cellSet cset(mesh, mesh.cellZones()[zoneI].name(),
-            mesh.cellZones()[zoneI]);
-            cset.write();
+            // Write the cellSets which has the same content as cellZones
+            forAll(mesh.cellZones(), zoneI)
+                {
+                    cellSet cset(mesh, mesh.cellZones()[zoneI].name(),
+                    mesh.cellZones()[zoneI]);
+                    cset.write();
+                }
+        }
+
+        if(mesh.faceZones().size() > 0)
+        {
+            // Write the faceSets which has the same content as faceZones
+            forAll(mesh.faceZones(), zoneI)
+                {
+                    faceSet fset(mesh, mesh.faceZones()[zoneI].name(),
+                    mesh.faceZones()[zoneI]);
+                    fset.write();
+                }
         }
     }
-
-    if(mesh.faceZones().size() > 0)
+    catch(error& e)
     {
-        // Write the faceSets which has the same content as faceZones
-        forAll(mesh.faceZones(), zoneI)
-        {
-            faceSet fset(mesh, mesh.faceZones()[zoneI].name(),
-            mesh.faceZones()[zoneI]);
-            fset.write();
-        }
+        gSeriousError(opt.verbosity_ >= 1) << e.message().c_str() << endl;
+        return false;
     }
 
     gInfo(opt.verbosity_ >= 3) << "    ... done." << endl;
+    return true;
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

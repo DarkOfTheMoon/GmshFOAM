@@ -20,51 +20,35 @@ License
     along with OpenFOAM; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
+Class
+
 Description
-    Converts a gmshMesh structure to a polyMesh structure.
+    Simple compatibility mechanism across different versions of OpenFOAM.
 
 SourceFiles
-    gmshToPolyMesh.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef gmshToPolyMesh_H
-#define gmshToPolyMesh_H
+#ifndef gmshFoamConfig_H
+#define gmshFoamConfig_H
 
-#ifdef cygwin
-#include "Time.hh"
+// OF >= 1.4 have Time(root, case) constructor which doesn't require
+// existence of controlDict and symmTensor
+#if WM_PROJECT_VERSION_MAJOR > 1 || (WM_PROJECT_VERSION_MAJOR == 1 \
+    && WM_PROJECT_VERSION_MINOR >= 4)
+#define WITH_NOREAD_TIME_CTOR 1
+#define WITH_SYMMTENSOR 1
 #else
-#include "Time.H"
+#define WITH_NOREAD_TIME_CTOR 0
+#define WITH_SYMMTENSOR 0
 #endif
 
-#include "gmshMesh.H"
-#include "polyMeshConversion.H"
-
-namespace Foam
-{
-
-struct gmshToPolyMeshOptions
-{
-    label nOptions_;
-    bool autoInvert_;
-    bool checkMesh_;
-    bool renumberMesh_;
-    bool removeUnusedPoints_;
-    label verbosity_;
-};
-
-polyMeshConversion* gmshToPolyMesh(gmshMesh& gmsh, const Time& runTime,
-const gmshToPolyMeshOptions& opt);
-
-bool writePolyMeshWithSets(const polyMeshConversion& mesh, Time& runTime,
-const gmshToPolyMeshOptions& opt);
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
+// OF >= 1.4.1 have fvsPatchField
+#if WM_PROJECT_VERSION_MAJOR == 1 && (WM_PROJECT_VERSION_MINOR < 4 \
+    || WM_PROJECT_VERSION_MINOR == 4 && WM_PROJECT_VERSION_PATCH == 0)
+#define WITH_FVSPATCHFIELD 0
+#else
+#define WITH_FVSPATCHFIELD 1
 #endif
 
-// ************************************************************************* //
+#endif

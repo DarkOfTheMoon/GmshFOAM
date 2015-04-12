@@ -100,10 +100,10 @@ fi
 
 # We need the $# = 4 case because FoamX creates an empty string argument as $3
 # if a .msh file is unspecified
-if [  $# != 2 -a $# != 3 -a \! \( $# = 4 -a "x$3" = "x" -a "x$4" = "x-monitor" \) ]
+if [  $# != 2 -a $# != 3 -a \! \( $# = 4 -a "x$3" = "x" -a \( "x$4" = "x-monitor" -o "x$4" = "x-mesh" -o "x$4" = "x-decomposedMesh" \) \) ]
 then
     echo $0: 'Wrong arguments'
-	echo 'Usage: gmshFoam <root> <case> [<.geo or .msh> or -monitor]'
+	echo 'Usage: gmshFoam <root> <case> [<.geo or .msh> or -decomposedMesh or -mesh or -monitor]'
     exit 1
 fi
 
@@ -165,6 +165,17 @@ else
 #		EndFor
 #	    EndFor
 #EOF
+    elif [ \( $# = 3 -a "x$3" = "x-mesh" \) -o \( $# = 4 -a "x$3" = "x" -a "x$4" = "x-mesh" \) ]
+    then
+        ${GMSH_EXE} -m  ..foam ${GMSHFOAM_OPTIONS} "${SOLVER_OPTIONS}"
+    elif [ \( $# = 3 -a "x$3" = "x-decomposedMesh" \) -o \( $# = 4 -a "x$3" = "x" -a "x$4" = "x-decomposedMesh" \) ]
+    then
+	SUB=`echo processor[0-9]* | sed -e 's/processor[0-9]*/&.foam/g'`
+	if [ "$SUB" = 'processor.foam[0-9]*' ] ; then
+	    echo $0: decomposed mesh not found
+	    exit 0
+	fi
+        ${GMSH_EXE} -m  ${SUB} ${GMSHFOAM_OPTIONS} "${SOLVER_OPTIONS}"
     else
         ${GMSH_EXE} -m "${ORIG_PWD}/$3" ${GMSHFOAM_OPTIONS} "${SOLVER_OPTIONS}"
     fi

@@ -10,10 +10,12 @@ polyMeshToGmsh/polyMeshToGmsh.C
 //polyMeshFromShapeMesh.C
 
 gmshViews/gmshViewBase.C
-gmshViews/gmshView.C
-gmshViews/gmshViewMeshMotion.C
-// disabled for now:
-//gmshViews/gmshViewPointMesh.C
+gmshViews/gmshViewPointMesh.C
+gmshViews/gmshViewPointMeshMotion.C
+gmshViews/gmshViewSurfaceMesh.C
+gmshViews/gmshViewSurfaceMeshMotion.C
+gmshViews/gmshViewVolMesh.C
+gmshViews/gmshViewVolMeshMotion.C
 gmshViews/gmshViews.C
 
 LIB = $(FOAM_USER_LIBBIN)/libgmshFoam

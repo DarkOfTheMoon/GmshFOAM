@@ -205,8 +205,32 @@ History after the 2) written in gmsh2ToFoam.C:
     libgmshFoam/polyMeshToGmsh. (31/Jul/2007 Takuya OSHIMA
     <oshima@eng.niigata-u.ac.jp>)
 
-    51) created foamMeshToGmsh, the standalone version of polyMesh
+    51) Created foamMeshToGmsh, the standalone version of polyMesh
         direct importer. (1/Aug/2007 Takuya OSHIMA
+        <oshima@eng.niigata-u.ac.jp>)
+
+    52) Supported reading decomposed mesh. (14/Aug/2007 Takuya OSHIMA
+        <oshima@eng.niigata-u.ac.jp>)
+
+    53) pointField support for postprocessing views. (14/Aug/2007
+        Takuya OSHIMA <oshima@eng.niigata-u.ac.jp>)
+
+    54) autoInvert set to on by default and some small tweaks. (18/Aug/2007
+        Takuya OSHIMA <oshima@eng.niigata-u.ac.jp>)
+
+    55) symmTensor field support for postprocessing
+        views. (20/Aug/2007 Takuya OSHIMA
+        <oshima@eng.niigata-u.ac.jp>)
+
+    56) implemented exception handlings. (3/Sep/2007 Takuya OSHIMA
+        <oshima@eng.niigata-u.ac.jp>)
+
+    57) OpenFOAM 1.4.1 support with introduction of version-specific
+        preprocessor symbols. (4/Sep/2007 Takuya OSHIMA
+        <oshima@eng.niigata-u.ac.jp>)
+
+    58) improved compatibility mechanism of 57) across different
+        versions of OpenFOAM. (5/Sep/2007 Takuya OSHIMA
         <oshima@eng.niigata-u.ac.jp>)
 
 \*---------------------------------------------------------------------------*/

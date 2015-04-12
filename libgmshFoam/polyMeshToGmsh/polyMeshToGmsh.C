@@ -33,6 +33,8 @@ using std::ofstream;
 #include "gmshElements.H"
 #include "gmshMessageStream.H"
 #include "polyMeshToGmsh.H"
+#include "processorPolyPatch.H"
+#include "typeInfo.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -41,36 +43,78 @@ namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-label polyMeshToGmsh::getNNames() const
+// physical region number starts from 1
+label polyMeshToGmsh::totalPhysicals_ = 1;
+
+    // Constructor
+polyMeshToGmsh::polyMeshToGmsh(const IOobject& io, const label verbosity)
+    : polyMesh(io), verbosity_(verbosity), nZoneFaces_(0), faceZoneI_(0),
+      zoneFaceI_(0), physicalNameI_(0), vertexI_(0), elementI_(0),
+      myProcNo_(0), myProcNoStr_()
 {
-    return cellZones().size() + faceZones().size() + boundaryMesh().size();
+    forAll(faceZones(), zoneI)
+    {
+        nZoneFaces_ += faceZones()[zoneI].size();
+    }
+
+    forAll(boundaryMesh(), patchI)
+    {
+        if(boundaryMesh().types()[patchI] == processorPolyPatch::typeName)
+        {
+            myProcNo_ = refCast<const processorPolyPatch>
+                (boundaryMesh()[patchI]).myProcNo();
+            OStringStream os;
+            os << "(" << myProcNo_ << ")" ;
+            myProcNoStr_ = os.str();
+            break;
+        }
+    }
 }
 
-label polyMeshToGmsh::getNElems() const
+label polyMeshToGmsh::getNNames()
+{
+    // +1 for cells which does not belong to any zones
+    return 1 + cellZones().size() + faceZones().size() + boundaryMesh().size();
+}
+
+label polyMeshToGmsh::getNElems()
 {
     return nCells() + nZoneFaces_ + nFaces() - boundaryMesh()[0].start();
 }
 
 void polyMeshToGmsh::getPhysicalName(int& num, char name[])
 {
-    // physical region number starts from 1
-    num = physicalNameI_ + 1;
+    num = totalPhysicals_ + physicalNameI_;
 
-    if(physicalNameI_ < cellZones().size())
+    if(physicalNameI_ == 0) // for cells which does not belong to any zones
     {
-        strncpy(name, cellZones().names()[physicalNameI_].c_str(), 256);
+        strncpy(name, (string("unnamed") + myProcNoStr_).c_str(), 256);
     }
-    else if(physicalNameI_ < cellZones().size() + faceZones().size())
+    else if(physicalNameI_ <= cellZones().size())
     {
-        const label zoneI = physicalNameI_ - cellZones().size();
-        strncpy(name, faceZones().names()[zoneI].c_str(), 256);
+        strncpy(name,
+        (cellZones().names()[physicalNameI_ - 1] + myProcNoStr_).c_str(), 256);
+    }
+    else if(physicalNameI_ <= cellZones().size() + faceZones().size())
+    {
+        const label zoneI = physicalNameI_ - 1 - cellZones().size();
+        strncpy(name, (faceZones().names()[zoneI] + myProcNoStr_).c_str(),
+        256);
     }
     else
     {
-        const label patchI = physicalNameI_ - cellZones().size()
+        const label patchI = physicalNameI_ - 1 - cellZones().size()
             - faceZones().size();
         std::string physicalName = boundaryMesh().names()[patchI];
 
+        // omot processor number suffix for processor patches
+        if(boundaryMesh().types()[patchI] != processorPolyPatch::typeName)
+        {
+            physicalName += myProcNoStr_;
+        }
+
+        // if the type is not patch append the type so that it can be retrieved
+        // back by gmsh2ToFoam
         if(boundaryMesh().types()[patchI] != polyPatch::typeName)
         {
             physicalName += " " + boundaryMesh().types()[patchI];
@@ -131,10 +175,10 @@ int& elementary, int& partition) const
         }
 
         num = elementI_;
-        // physical region number starts from 1
-        physical = cellZones().whichZone(elementI_) + 1;
-        elementary = physical;
-        partition = 0;
+        // whichZone returns -1 if the cell does not belong to any zones
+        elementary = cellZones().whichZone(elementI_) + 1 + totalPhysicals_;
+        physical = elementary;
+        partition = myProcNo_;
     }
     else
     {
@@ -142,16 +186,14 @@ int& elementary, int& partition) const
         if(elementI_ < nCells() + nZoneFaces_)
         {
             faceI = faceZones()[faceZoneI_][zoneFaceI_];
-            // physical region number starts from 1
-            physical = cellZones().size() + faceZoneI_ + 1;
+            elementary = cellZones().size() + 1 + faceZoneI_ + totalPhysicals_;
         }
         else
         {
             faceI = elementI_ - nCells() - nZoneFaces_
                 + boundaryMesh()[0].start();
-            // physical region number starts from 1
-            physical = cellZones().size() + faceZones().size()
-                + boundaryMesh().whichPatch(faceI) + 1;
+            elementary = cellZones().size() + 1 + faceZones().size()
+                + boundaryMesh().whichPatch(faceI) + totalPhysicals_;
         }
 
         const label nVerts = allFaces()[faceI].size();
@@ -171,8 +213,8 @@ int& elementary, int& partition) const
         }
 
         num = elementI_;
-        elementary = physical;
-        partition = 0;
+        physical = elementary;
+        partition = myProcNo_;
     }
 }
 

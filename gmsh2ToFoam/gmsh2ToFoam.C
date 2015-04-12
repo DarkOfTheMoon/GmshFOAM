@@ -45,6 +45,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
+#include "gmshFoamConfig.H"
+
 #ifdef cygwin
 #include "Time.hh"
 #else
@@ -123,7 +125,7 @@ int main(int argc, char *argv[])
 {
     argList::noParallel();
     argList::validArgs.append(".msh or .geo file");
-    argList::validOptions.insert("autoInvert", "");
+    argList::validOptions.insert("noAutoInvert", "");
     argList::validOptions.insert("noCheckMesh", "");
     argList::validOptions.insert("noRenumberMesh", "");
     argList::validOptions.insert("noUnusedPointRemoval", "");
@@ -131,12 +133,19 @@ int main(int argc, char *argv[])
     "verbosity (0-5; defaults to 3)");
 
 #include "setRootCase.H"
+
     gInfo << endl;
-#include "createTime.H"
+
+#if WITH_NOREAD_TIME_CTOR
+    // with this Time object mesh can be written without system/ subdirectory
+    Time runTime(args.rootPath(), args.caseName());
+#else
+#   include "createTime.H"
+#endif
 
     gmshToPolyMeshOptions opt;
     opt.nOptions_ = 5;
-    opt.autoInvert_ = args.options().found("autoInvert");
+    opt.autoInvert_ = !args.options().found("noAutoInvert");
     opt.checkMesh_ = !args.options().found("noCheckMesh");
     opt.renumberMesh_ = !args.options().found("noRenumberMesh");
     opt.removeUnusedPoints_ = !args.options().found("noUnusedPointRemoval");

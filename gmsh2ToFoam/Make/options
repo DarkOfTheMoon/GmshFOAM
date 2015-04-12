@@ -1,6 +1,10 @@
 EXE_INC = \
     -I../libgmshFoam/lnInclude \
     -I../libgmshMessageStream/lnInclude \
+    -I.. \
+    -DWM_PROJECT_VERSION_MAJOR=`echo $(WM_PROJECT_VERSION) | awk 'BEGIN{FS="."}{print $$1;}'` \
+    -DWM_PROJECT_VERSION_MINOR=`echo $(WM_PROJECT_VERSION) | awk 'BEGIN{FS="."}{print $$2;}'` \
+    -DWM_PROJECT_VERSION_PATCH=`echo $(WM_PROJECT_VERSION) | awk 'BEGIN{FS="."}{if (length($$3) > 0) print $$3; else print "0";}'`
 
 EXE_LIBS = \
     -ldynamicMesh \

@@ -8,8 +8,6 @@ Preprocessing:
 
 Postprocessing:
 
-  * Support for pointFields
-
   * Selection of fields to be read in
 
   * Extracting fields within a given timestep range (or a single timestep)
