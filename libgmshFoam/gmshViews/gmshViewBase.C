@@ -42,7 +42,7 @@ label gmshViewBase::nComponents_[] = {1, 3, 9};
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void gmshViewBase::getViewSize(gmshViewHeader& vH, label vSize[])
+void gmshViewBase::getViewSize(const gmshViewHeader& vH, label vSize[]) const
 {
     for(label typeJ = 0; typeJ < 15; typeJ++)
     {

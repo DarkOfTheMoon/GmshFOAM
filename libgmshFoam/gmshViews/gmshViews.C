@@ -502,7 +502,7 @@ void gmshViews::convertView(gmshViewBase& gV, const fileName& gmshViewsFolder)
 
     // allocate memory
     gmshViewBase::gmshViewBuffer vB;
-    label sSize[gmshViewBase::nGeoTypes + 4];
+    label sSize[gmshViewBase::nGeoTypes];
     gV.getViewSize(vH, sSize);
     for(label typeI = 0; typeI < gmshViewBase::nGeoTypes; typeI++)
     {

@@ -25,7 +25,58 @@
 #     gmshFoam
 #
 # Description
-#     a simple script for using Gmsh as a postprocessor.
+#     a simple script for using Gmsh as a pre/mid/post-processor.
+#
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+#
+# Utilities
+#
+#------------------------------------------------------------------------------
+
+# getPID processName
+# Prints pid of named process with the given argument
+# (looks at users processes only)
+getPID() {
+    if [ "x$WM_ARCH" = "xcygwin" ]; then
+	# the cygwin ps gives command name in full path but
+	# does not provide arguments given to commands
+	ps -u `logname` -s | awk '(FNR > 1) { print $1, $4 }' | fgrep "/$1" | fgrep -v grep | head -1 | awk '{ print $1 }'
+    else
+	ps -u $LOGNAME -o 'pid,args' | fgrep " $1" | fgrep "$2" | fgrep -v grep | head -1 | awk '{ print $1 }'
+    fi
+}
+
+# myKillAll processName argument
+# Tries to kill all (first 10) occurrences of named process with the given
+# argument
+myKillAll() {
+    PROGNAME=`basename "$0"`
+    process=`getPID $1 "$2"`
+    # if [ ! "$process" ]; then
+    #     echo "${PROGNAME}: Process $1 is not running."
+    # fi
+
+    n=0
+    while [ $n -lt 10 ]
+    do
+        # Kill the process if it is running
+        if [ "$process" ]
+        then
+	    echo "${PROGNAME}: Killing $1 (pid $process)."
+            kill -9 $process
+        else
+            break
+        fi
+        process=`getPID $1 "$2"`
+        n=`expr $n + 1`
+    done
+}
+
+#------------------------------------------------------------------------------
+#
+# Main
 #
 #------------------------------------------------------------------------------
 
@@ -38,7 +89,7 @@ fi
 
 GMSH_EXE="${WM_PROJECT_INST_DIR}/${WM_ARCH}/gmsh-${GMSH_VERSION}/bin/gmsh"
 
-if [ "${WM_ARCH}" = "cygwin" ] ; then
+if [ "x${WM_ARCH}" = "xcygwin" ] ; then
     GMSH_EXE="${GMSH_EXE}.exe"
 fi
 
@@ -47,49 +98,57 @@ if [ ! -x "${GMSH_EXE}" ] ; then
     exit 1
 fi
 
-if [  $# != 2 -a $# != 3 ]; then
-    echo $0: 'Wrong number of arguments'
+# We need the $# = 4 case because FoamX creates an empty string argument as $3
+# if a .msh file is unspecified
+if [  $# != 2 -a $# != 3 -a \! \( $# = 4 -a "x$3" = "x" -a "x$4" = "x-monitor" \) ]
+then
+    echo $0: 'Wrong arguments'
 	echo 'Usage: gmshFoam <root> <case> [<.geo or .msh> or -monitor]'
     exit 1
 fi
 
-ROOT=$1
+ROOT="$1"
 if [ "$ROOT" = "." -o "$ROOT" = "./" ] ; then
     ROOT=`pwd`
 fi
 
-CASE=$2
-CASE_DIR=$ROOT/$CASE
+CASE="$2"
+CASE_DIR="$ROOT/$CASE"
 
 if [ ! -d $CASE_DIR ]; then
     echo $0: case directory $CASE_DIR does not exist, exiting
     exit 0
 fi
 
+SOLVER_OPTIONS="\
+	Solver.Name1=\"OpenFOAM case monitor\";
+	Solver.Executable1=\"gmshFoamMonitor\";
+	Solver.Help1=\"Monitors a case directory at the specified interval \
+	and visualizes the newest field data on-the-fly.\";
+	Solver.OptionCommand1=\"\";
+	Solver.NameCommand1=\"${ROOT} ${CASE}\";
+	Solver.FirstOption1=\"Interval [sec.]\";
+	Solver.FirstButton1=\"Start\";
+	Solver.FirstButtonCommand1=\"-monitor %%s\";
+	Solver.ClientServer1=1;
+	Solver.MergeViews1=1;
+	Solver.PopupMessages1=1;
+"
+
+GMSHFOAM_OPTIONS="-o \"${CASE_DIR}.foam\" -format foam -string"
+
 cd $CASE_DIR
 
-if [ $# = 2 ] ; then
+if [ $# = 2 -o \( $# = 3 -a "x$3" = "x" \) ] ; then
     if [ ! -r system/controlDict ]; then
         echo $0: system/controlDict does not exist in case directory $CASE_DIR, exiting
         exit 0
     fi
-    ${GMSH_EXE} -p system/controlDict
-elif [ $# = 3 ] ; then
-    if [ $3 = "-monitor" ] ; then
-	${GMSH_EXE} -s -option /dev/stdin <<EOF 
-	    Solver.Name1="OpenFOAM case monitor";
-	    Solver.Executable1="gmshFoamMonitor";
-	    Solver.Help1="Monitors a case directory at the specified interval
-and visualizes the newest field data on-the-fly.";
-	    Solver.OptionCommand1="";
-	    Solver.NameCommand1="${ROOT} ${CASE}";
-	    Solver.FirstOption1="Interval [sec.]";
-	    Solver.FirstButton1="Start";
-	    Solver.FirstButtonCommand1="-monitor %s";
-	    Solver.ClientServer1=1;
-	    Solver.MergeViews1=1;
-	    Solver.PopupMessages1=1;
-EOF
+    ${GMSH_EXE} -p system/controlDict ${GMSHFOAM_OPTIONS} "${SOLVER_OPTIONS}"
+else
+    if [ \( $# = 3 -a "x$3" = "x-monitor" \) -o \( $# = 4 -a "x$3" = "x" -a "x$4" = "x-monitor" \) ]
+    then
+	${GMSH_EXE} -s ${GMSHFOAM_OPTIONS} "${SOLVER_OPTIONS}"
 ## Old monitoring implementation - simple but too inefficient.
 #	${GMSH_EXE} /dev/stdin <<EOF 
 #	    endIter=2^31-1;
@@ -105,8 +164,10 @@ EOF
 #	    EndFor
 #EOF
     else
-        ${GMSH_EXE} -m $3 -o "${CASE_DIR}.foam" -format foam
+        ${GMSH_EXE} -m $3 ${GMSHFOAM_OPTIONS} "${SOLVER_OPTIONS}"
     fi
 fi
+
+myKillAll gmshFoamMonitor "${ROOT} ${CASE}"
 
 #------------------------------------------------------------------------------

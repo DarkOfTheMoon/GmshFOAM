@@ -121,6 +121,10 @@ GmshClient& client, const label interval)
                 << latestInstant.name().c_str() << " found." << endl;
             client.Info(newDirectoryStr.str().c_str());
 
+            // sleep for another two seconds to make sure all the
+            // field data are written
+            Foam::sleep(2);
+
             // instruct Gmsh to read the newest time directory
             OStringStream mergeStr;
             mergeStr << "For viewI In {0:PostProcessing.NbViews-1}" << endl

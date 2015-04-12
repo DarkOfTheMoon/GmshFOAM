@@ -441,7 +441,8 @@ void gmshView<T1, T2, T4>
 ::write(const fileName& name, const gmshPostFormat& pF,
 const gmshViewHeader& vH, const char* tB, const gmshViewBuffer &vB) const
 {
-    OFstream vFile(name, OFstream::BINARY);
+    // using std::ofstream because Foam::OFstream writes unnecessary delimiters
+    std::ofstream vFile(name.c_str(), std::ios::binary);
     OStringStream oStr;
 
     gInfo(verbosity_ >= 3) << "    Writing view" << endl;
@@ -449,7 +450,7 @@ const gmshViewHeader& vH, const char* tB, const gmshViewBuffer &vB) const
 
     // write header
     oStr << "$PostFormat" << endl
-        << "1.4 0 " << pF.size << endl
+        << pF.version << " " << pF.format << " " <<  pF.size << endl
         << "$EndPostFormat" << endl;
 
     oStr << "$View" << endl;
@@ -466,79 +467,115 @@ const gmshViewHeader& vH, const char* tB, const gmshViewBuffer &vB) const
         << vH.NbT3 << " " << vH.t3l << endl;
 
     vFile << oStr.str().c_str();
-    for(label timeI = 0; timeI < vH.NbTimeStep; timeI++)
-    {
-        vFile << reinterpret_cast<const T1*>(tB)[timeI] << " ";
-    }
 
-    gInfo(verbosity_ >= 4) << "        Writing elements" << endl;
-
-    vFile << endl;
-    for(label typeI = 0; typeI < gmshViewBase::nGeoTypes; typeI++)
+    if(pF.format == 1)
     {
-        label elemI = 0;
-        for(label cellI = 0; cellI < vH.Nb[typeI]; cellI++)
+        // format is binary
+
+        const int one = 1;
+        vFile.write(reinterpret_cast<const char*>(&one), sizeof(int));
+
+        vFile.write(tB, pF.size * vH.NbTimeStep);
+
+        gInfo(verbosity_ >= 4) << "        Writing elements" << endl;
+
+        label sSize[gmshViewBase::nGeoTypes];
+        getViewSize(vH, sSize);
+
+        for(label typeI = 0; typeI < gmshViewBase::nGeoTypes; typeI++)
         {
-            for(label componentI = 0; componentI < 3; componentI++)
+            vFile.write(vB.buf[typeI], pF.size * sSize[typeI]);
+        }
+
+        // 2D texts
+        vFile.write(vB.T2D, vH.NbT2 * 4 * pF.size);
+        vFile.write(vB.T2C, vH.t2l * sizeof(char));
+
+        // 3D texts
+        vFile.write(vB.T3D, vH.NbT3 * 5 * pF.size);
+        vFile.write(vB.T3C, vH.t3l * sizeof(char));
+    }
+    else
+    {
+        // format is ascii
+
+        for(label timeI = 0; timeI < vH.NbTimeStep; timeI++)
+        {
+            vFile << reinterpret_cast<const T1*>(tB)[timeI] << " ";
+        }
+
+        gInfo(verbosity_ >= 4) << "        Writing elements" << endl;
+
+        vFile << std::endl;
+        for(label typeI = 0; typeI < gmshViewBase::nGeoTypes; typeI++)
+        {
+            label elemI = 0;
+            for(label cellI = 0; cellI < vH.Nb[typeI]; cellI++)
             {
-                for(label pointI = 0; pointI < nVertices_[typeI / 3]; pointI++)
+                for(label componentI = 0; componentI < 3; componentI++)
                 {
-                    vFile << reinterpret_cast<T1*>(vB.buf[typeI])[elemI]
-                        << " ";
-                    elemI++;
-                }
-                vFile << endl;
-            }
-            for(label timeI = 0; timeI < vH.NbTimeStep; timeI++)
-            {
-                for(label pointI = 0; pointI < nVertices_[typeI / 3]; pointI++)
-                {
-                    for(label componentI = 0;
-                        componentI < nComponents_[typeI % 3]; componentI++)
+                    for(label pointI = 0; pointI < nVertices_[typeI / 3];
+                        pointI++)
                     {
                         vFile << reinterpret_cast<T1*>(vB.buf[typeI])[elemI]
                             << " ";
                         elemI++;
                     }
-                    vFile << endl;
+                    vFile << std::endl;
+                }
+                for(label timeI = 0; timeI < vH.NbTimeStep; timeI++)
+                {
+                    for(label pointI = 0; pointI < nVertices_[typeI / 3];
+                        pointI++)
+                    {
+                        for(label componentI = 0;
+                            componentI < nComponents_[typeI % 3]; componentI++)
+                        {
+                            vFile
+                                << reinterpret_cast<T1*>(vB.buf[typeI])[elemI]
+                                << " ";
+                            elemI++;
+                        }
+                        vFile << std::endl;
+                    }
                 }
             }
         }
-    }
 
-    // 2D texts
-    for(label textI = 0, elemI = 0; textI < vH.NbT2; textI++)
-    {
-        for(label numI = 0; numI < 4; numI++)
+        // 2D texts
+        for(label textI = 0, elemI = 0; textI < vH.NbT2; textI++)
         {
-            vFile << reinterpret_cast<T1*>(vB.T2D)[elemI] << " ";
-            elemI++;
+            for(label numI = 0; numI < 4; numI++)
+            {
+                vFile << reinterpret_cast<T1*>(vB.T2D)[elemI] << " ";
+                elemI++;
+            }
+            vFile << std::endl;
         }
-        vFile << endl;
-    }
-    for(label charI = 0; charI < vH.t2l; charI++)
-    {
-        vFile << vB.T2C[charI];
-    }
-    vFile << endl;
-
-    // 3D texts
-    for(label textI = 0, elemI = 0; textI < vH.NbT3; textI++)
-    {
-        for(label numI = 0; numI < 5; numI++)
+        for(label charI = 0; charI < vH.t2l; charI++)
         {
-            vFile << reinterpret_cast<T1*>(vB.T3D)[elemI] << " ";
-            elemI++;
+            vFile << vB.T2C[charI];
         }
-        vFile << endl;
-    }
-    for(label charI = 0; charI < vH.t3l; charI++)
-    {
-        vFile << vB.T3C[charI];
-    }
-    vFile << endl;
+        vFile << std::endl;
 
-    vFile << "$EndView" << endl;
+        // 3D texts
+        for(label textI = 0, elemI = 0; textI < vH.NbT3; textI++)
+        {
+            for(label numI = 0; numI < 5; numI++)
+            {
+                vFile << reinterpret_cast<T1*>(vB.T3D)[elemI] << " ";
+                elemI++;
+            }
+            vFile << std::endl;
+        }
+        for(label charI = 0; charI < vH.t3l; charI++)
+        {
+            vFile << vB.T3C[charI];
+        }
+    }
+
+    vFile << std::endl;
+    vFile << "$EndView" << std::endl;
 
     gInfo(verbosity_ >= 4) << "        ... done." << endl;
 }

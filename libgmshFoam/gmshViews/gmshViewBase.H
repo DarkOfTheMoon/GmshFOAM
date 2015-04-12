@@ -124,7 +124,7 @@ public:
         = 0;
 
     // Member functions
-    void getViewSize(gmshViewHeader& vH, label vSize[]);
+    void getViewSize(const gmshViewHeader& vH, label vSize[]) const;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

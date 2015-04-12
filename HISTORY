@@ -143,4 +143,29 @@ History after the 2) written in gmsh2ToFoam.C:
     35) Fixed mesh motion handling bugs. (11/Apr/2007 Takuya OSHIMA
     <oshima@eng.niigata-u.ac.jp>)
 
+    36) Added the FoamX config file for gmshFoam (To make gmshFoam
+    available from FoamX the directory name must be renamed from
+    gmshFoam-YYYYMMDD to gmshFoam). (18/Apr/2007 Takuya OSHIMA
+    <oshima@eng.niigata-u.ac.jp>)
+
+    37) gmshFoam kills running gmshFoamMonitors when
+    exits. (23/Apr/2007 Takuya OSHIMA <oshima@eng.niigata-u.ac.jp>)
+
+    38) gmshFoam is now basically modeless: gmshFoamMonitor can be
+    launched even if gmshFoam is started as pre/postprocessor.
+    (23/Apr/2007 Takuya OSHIMA <oshima@eng.niigata-u.ac.jp>)
+
+    39) foamToGmsh now writes view data in binary format, which is
+    much faster to write/read. (25/Apr/2007 Takuya OSHIMA
+    <oshima@eng.niigata-u.ac.jp>)
+
+    40) gmshFoam case monitoring now works under Cygwin. (10/May/2007
+    Takuya OSHIMA <oshima@eng.niigata-u.ac.jp>)
+
+    41) Added "Step backward" and "Step forward" buttons to
+    Gmsh. (13/May/2007 Takuya OSHIMA <oshima@eng.niigata-u.ac.jp>)
+
+    42) Workaround for empty .msh file argument by FoamX. (13/May/2007
+        Takuya OSHIMA <oshima@eng.niigata-u.ac.jp>)
+
 \*---------------------------------------------------------------------------*/
