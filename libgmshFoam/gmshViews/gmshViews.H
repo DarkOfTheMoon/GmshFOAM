@@ -34,11 +34,7 @@ SourceFiles
 #ifndef gmshViews_H
 #define gmshViews_H
 
-#ifdef cygwin
-#include "Time.hh"
-#else
 #include "Time.H"
-#endif
 #include "fvMesh.H"
 
 #include "gmshViewBase.H"

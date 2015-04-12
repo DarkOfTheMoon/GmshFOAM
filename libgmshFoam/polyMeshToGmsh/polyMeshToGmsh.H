@@ -33,11 +33,7 @@ SourceFiles
 
 #include "polyMesh.H"
 #include "cellModeller.H"
-#ifdef cygwin
-#include "Time.hh"
-#else
 #include "Time.H"
-#endif
 
 namespace Foam
 {
