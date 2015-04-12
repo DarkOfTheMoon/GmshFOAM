@@ -69,6 +69,7 @@ const gmshToPolyMeshOptions& opt)
     // (but without any faces in it)
     faceListList boundaryFaces(gmsh.patchFaces().size());
 
+    word defaultFacesName = "defaultFaces";
     word defaultFacesType = polyPatch::typeName;
     wordList boundaryPatchPhysicalTypes
         (
@@ -84,11 +85,12 @@ const gmshToPolyMeshOptions& opt)
                 runTime.constant(),
                 runTime
             ),
-            gmsh.points(),
+            Xfer<pointField>(gmsh.points()),
             gmsh.cells(),
             boundaryFaces,
             boundaryPatchNames,
             boundaryPatchTypes,
+            defaultFacesName,
             defaultFacesType,
             boundaryPatchPhysicalTypes
         );

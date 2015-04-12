@@ -196,7 +196,7 @@ int& elementary, int& partition) const
                 + boundaryMesh().whichPatch(faceI) + totalPhysicals_;
         }
 
-        const label nVerts = allFaces()[faceI].size();
+        const label nVerts = faces()[faceI].size();
         if(nVerts == 3)
         {
             type = 2;
@@ -249,7 +249,7 @@ void polyMeshToGmsh::getElementVerticesIndices(int indices[])
             faceI = elementI_ - nCells() - nZoneFaces_
                 + boundaryMesh()[0].start();
         }
-        const face& f = allFaces()[faceI];
+        const face& f = faces()[faceI];
 
         forAll(f, pointI)
         {

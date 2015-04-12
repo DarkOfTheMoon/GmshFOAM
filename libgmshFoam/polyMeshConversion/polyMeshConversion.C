@@ -231,9 +231,9 @@ polyMeshConversion* polyMeshConversion::renumberedMesh(const label verbosity)
         }
     }
 
-    faceList newFaces(allFaces().size());
+    faceList newFaces(this->faces().size());
 
-    const faceList& oldFaces = allFaces();
+    const faceList& oldFaces = this->faces();
 
     forAll (newFaces, faceI)
     {
@@ -264,9 +264,9 @@ polyMeshConversion* polyMeshConversion::renumberedMesh(const label verbosity)
             time().constant(),
             time()
         ),
-        allPoints(),
-        newFaces,
-        newCells
+        Xfer<pointField>(points()),
+        Xfer<faceList>(newFaces),
+        Xfer<cellList>(newCells)
     );
 
     polyMeshConversion& newMesh = *newMeshPtr;
