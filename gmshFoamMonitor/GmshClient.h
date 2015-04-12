@@ -118,7 +118,7 @@ class GmshClient {
     }
     else{
       // INET socket
-      char *port = strstr(sockname, ":");
+      const char *port = strstr(sockname, ":");
       portno = atoi(port+1);
       int remotelen = strlen(sockname) - strlen(port);
       if(remotelen > 0)
