@@ -6,5 +6,6 @@ set -x
 (cd libgmshFoam; wclean; wcleanLnIncludeAll)
 (cd gmsh2ToFoam; wclean)
 (cd foamToGmsh; wclean)
+(cd foamMeshToGmsh; wclean)
 (cd gmshFoamMonitor; wclean)
 find . -name '*.stackdump' -exec rm \{\} \;

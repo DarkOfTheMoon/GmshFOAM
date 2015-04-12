@@ -3,10 +3,11 @@ gmshMesh/gmshPhysicalNames.C
 gmshMesh/gmshNodes.C
 gmshMesh/gmshElements.C
 gmshMesh/gmshMesh.C
+gmshToPolyMesh/gmshToPolyMesh.C
 polyMeshConversion/polyMeshConversion.C
+polyMeshToGmsh/polyMeshToGmsh.C
 // disabled for now:
 //polyMeshFromShapeMesh.C
-gmshToPolyMesh.C
 
 gmshViews/gmshViewBase.C
 gmshViews/gmshView.C

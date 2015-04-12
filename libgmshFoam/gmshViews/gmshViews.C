@@ -269,9 +269,9 @@ void gmshViews::makeBoundaryFaceLists()
                 }
                 else
                 {
-                    gWarning << "Unhandled face type " << f.size() 
-                        << " for face " << faceI << " of patch " << patchI
-                        << endl;
+                    gWarning << "Unhandled number of face vertices "
+                        << f.size() << " for face " << faceI << " of patch "
+                        << patchI << endl;
                 }
             }
         }

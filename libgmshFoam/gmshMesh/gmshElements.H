@@ -134,6 +134,11 @@ public:
     const label regPhys, const label regElem, const label partition,
     const label vertices[]);
     void postInsertElements();
+
+    // utility to make use of type-nVerts table from outside of this class
+    // static member function cannnot have cv-qualifier
+    static label typeToNVerts(const label type)
+        { return elemTab_[type].nVerts_; }
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

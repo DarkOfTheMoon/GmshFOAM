@@ -6,5 +6,6 @@ wmake libso libgmshMessageStream && \
 wmake libso libgmshFoam && \
 wmake gmsh2ToFoam && \
 wmake foamToGmsh && \
+wmake foamMeshToGmsh && \
 wmake gmshFoamMonitor && \
 cp gmshFoam ${FOAM_USER_APPBIN}

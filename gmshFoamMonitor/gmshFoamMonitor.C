@@ -125,21 +125,35 @@ GmshClient& client, const label interval)
             // field data are written
             Foam::sleep(2);
 
-            // instruct Gmsh to read the newest time directory
+            // instruct Gmsh to save the current view visibility
+            // settings, delete the views and read the newest time
+            // directory
             OStringStream mergeStr;
-            mergeStr << "For viewI In {0:PostProcessing.NbViews-1}" << endl
+            mergeStr << "nViews = PostProcessing.NbViews;" << endl
+                << "For viewI In {0:PostProcessing.NbViews-1}" << endl
+                << "isVisible[viewI] = View[0].Visible;" << endl
                 << "Delete View[0];" << endl
                 << "EndFor" << endl;
             mergeStr << "Merge \"" << casePath.c_str()
                 << "/system/controlDict\";" << endl;
 
-            // read the view option string everytime the views are
-            // renewed so that the new options can be applied
+            // read the view option string everytime new views are
+            // loaded so that the new options can be applied
             // on-the-fly
             string viewOptionStr;
             if(readDictionaryOptions(viewOptionStr, "viewOptions", runTime))
             {
                 mergeStr << viewOptionStr.c_str() << endl;
+            }
+            else
+            {
+                // restore the view visibility settings if the
+                // viewOptions are not present
+                mergeStr << "nViews = (nViews > PostProcessing.NbViews"
+                    " ? PostProcessing.NbViews : nViews);"
+                    << "For viewI In {0:nViews-1}" << endl
+                    << "View[viewI].Visible = isVisible[viewI];" << endl
+                    << "EndFor" << endl;
             }
 
             mergeStr << "Draw;" << endl;

@@ -30,12 +30,7 @@ FoamFile
 // viewOptions empty strings.
 
 // Time where monitoring the case directory finishes; "endTime" if
-// monitors up to exactly the endTime set in controlDict. Note that
-// the final time written to the case directory necessary does not
-// exactly match the endTime, because we useally set writeInterval in
-// controlDict larger then 1. In such cases if the stopAt is set to
-// exactly the endTime in cotrolDict gmshFoamMonitor never finishes;
-// you have to manually kill gmshFoamMonitor.
+// monitors up to exactly the endTime set in controlDict.
 //
 //stopAt "endTime";
 stopAt "0.5";

@@ -80,7 +80,7 @@ myKillAll() {
 #
 #------------------------------------------------------------------------------
 
-GMSH_VERSION=2.0.7
+GMSH_VERSION=2.0.8
 
 if [ "x${WM_PROJECT_DIR}" = "x" ] ; then
     echo $0: 'Set the OpenFOAM environment variables first.'
@@ -135,9 +135,11 @@ SOLVER_OPTIONS="\
 	Solver.PopupMessages1=1;
 "
 
-GMSHFOAM_OPTIONS="-o \"${CASE_DIR}.foam\" -format foam -string"
-
+ORIG_PWD="${PWD}"
 cd $CASE_DIR
+
+# Using PWD to avoid the polyMesh folder going into a wrong directory
+GMSHFOAM_OPTIONS="-o ${PWD}.foam -format foam -string"
 
 if [ $# = 2 -o \( $# = 3 -a "x$3" = "x" \) ] ; then
     if [ ! -r system/controlDict ]; then
@@ -164,7 +166,7 @@ else
 #	    EndFor
 #EOF
     else
-        ${GMSH_EXE} -m $3 ${GMSHFOAM_OPTIONS} "${SOLVER_OPTIONS}"
+        ${GMSH_EXE} -m "${ORIG_PWD}/$3" ${GMSHFOAM_OPTIONS} "${SOLVER_OPTIONS}"
     fi
 fi
 

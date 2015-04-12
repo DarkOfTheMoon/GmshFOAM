@@ -168,4 +168,45 @@ History after the 2) written in gmsh2ToFoam.C:
     42) Workaround for empty .msh file argument by FoamX. (13/May/2007
         Takuya OSHIMA <oshima@eng.niigata-u.ac.jp>)
 
+    43) A very simple hack for the Stream Lines plugin to use
+        multi-step data for time integration. (16/May/2007 Takuya
+        OSHIMA <oshima@eng.niigata-u.ac.jp>)
+
+    44) Fixed a gmshFoam script bug that caused a Gmsh crash when
+        saving polyMesh. (3/Jun/2007 Takuya OSHIMA
+        <oshima@eng.niigata-u.ac.jp>)
+
+    45) Stream Lines plugin correctly works over a view that doesn't
+        start from the time value 0. (3/Jun/2007 Takuya OSHIMA
+        <oshima@eng.niigata-u.ac.jp>)
+
+    46) gmshFoamMonitor restores view visibility settings after
+        loading new timestep views. (4/Jun/2007 Takuya OSHIMA
+        <oshima@eng.niigata-u.ac.jp>)
+
+    47) Another gmshFoam script bugfix. (11/Jun/2007 Takuya OSHIMA
+        <oshima@eng.niigata-u.ac.jp>)
+
+    48) Yet another gmshFoam script bugfix. (12/Jun/2007 Takuya OSHIMA
+        <oshima@eng.niigata-u.ac.jp>)
+
+    49) gmshFoam is now based on the 2.0.8 version of Gmsh. This
+    migration involves removal of the following codes from the patch
+    since they have been contributed to the official 2.0.8 release of
+    Gmsh:
+    * Step back/forward buttons
+    * Unsteady multistep stream lines
+    * Cygwin-specific fix in meshGRegionTransFinite.cpp
+    and removal of the Mesh.FoamRemoveUnusedPoints option since the 2.0.8
+    release has its own unused point remover. (30/Jul/2007 Takuya
+    OSHIMA <oshima@eng.niigata-u.ac.jp>)
+
+    50) Gmsh now has polyMesh direct importer with the help of
+    libgmshFoam/polyMeshToGmsh. (31/Jul/2007 Takuya OSHIMA
+    <oshima@eng.niigata-u.ac.jp>)
+
+    51) created foamMeshToGmsh, the standalone version of polyMesh
+        direct importer. (1/Aug/2007 Takuya OSHIMA
+        <oshima@eng.niigata-u.ac.jp>)
+
 \*---------------------------------------------------------------------------*/
