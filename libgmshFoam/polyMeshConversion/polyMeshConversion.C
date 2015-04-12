@@ -33,11 +33,7 @@ Description
 
 #include "bandCompression.H"
 #include "SLList.H"
-#ifdef cygwin
-#include "Time.hh"
-#else
 #include "Time.H"
-#endif
 #include "SortableList.H"
 #include "repatchPolyTopoChanger.H"
 
@@ -53,8 +49,10 @@ namespace Foam
 
 polyMeshConversion::polyMeshConversion
 (
-    const IOobject& io, const pointField& points, const faceList& faces,
-    const cellList& cells
+    const IOobject& io,
+    const Xfer<pointField>& points,
+    const Xfer<faceList>& faces,
+    const Xfer<cellList>& cells
 )
     :
     polyMesh(io, points, faces, cells)
@@ -62,14 +60,19 @@ polyMeshConversion::polyMeshConversion
 
 polyMeshConversion::polyMeshConversion
 (
-    const IOobject& io, const pointField& points, const cellShapeList& shapes,
-    const faceListList& boundaryFaces, const wordList& boundaryPatchNames,
-    const wordList& boundaryPatchTypes, const word& defaultBoundaryPatchType,
+    const IOobject& io,
+    const Xfer<pointField>& points,
+    const cellShapeList& shapes,
+    const faceListList& boundaryFaces,
+    const wordList& boundaryPatchNames,
+    const wordList& boundaryPatchTypes,
+    const word& defaultBoundaryPatchName,
+    const word& defaultBoundaryPatchType,
     const wordList& boundaryPatchPhysicalTypes
 )
 :
     polyMesh(io, points, shapes, boundaryFaces, boundaryPatchNames,
-    boundaryPatchTypes, defaultBoundaryPatchType, boundaryPatchPhysicalTypes)
+    boundaryPatchTypes,defaultBoundaryPatchName, defaultBoundaryPatchType, boundaryPatchPhysicalTypes)
 {}
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //

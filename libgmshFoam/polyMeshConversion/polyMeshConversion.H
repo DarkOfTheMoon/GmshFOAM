@@ -75,16 +75,22 @@ public:
     //- Construct from points, faces and cells
     polyMeshConversion
     (
-        const IOobject& io, const pointField& points, const faceList& faces,
-        const cellList& cells
+        const IOobject& io,
+        const Xfer<pointField>& points,
+        const Xfer<faceList>& faces,
+        const Xfer<cellList>& cells
     );
 
     //- Construct from cellShapeList
     polyMeshConversion
     (
-        const IOobject& io, const pointField& points,
-        const cellShapeList& shapes, const faceListList& boundaryFaces,
-        const wordList& boundaryPatchNames, const wordList& boundaryPatchTypes,
+        const IOobject& io,
+        const Xfer<pointField>& points,
+        const cellShapeList& shapes,
+        const faceListList& boundaryFaces,
+        const wordList& boundaryPatchNames,
+        const wordList& boundaryPatchTypes,
+        const word& defaultBoundaryPatchName,
         const word& defaultBoundaryPatchType,
         const wordList& boundaryPatchPhysicalTypes
     );
