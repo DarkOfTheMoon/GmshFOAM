@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 
     // set the folder where the view files go
     const fileName gmshViewsFolder = args.rootPath()/args.caseName()/"Gmsh";
-    if(dir(gmshViewsFolder))
+    if(isDir(gmshViewsFolder))
     {
         gInfo(opt.verbosity_ >= 3) << endl << "Removing old Gmsh files in "
             << gmshViewsFolder << endl;
