@@ -1,11 +1,11 @@
 #!/bin/sh
-
+makeType=${1:-libso}
 set -x
 
-wmake libso libgmshMessageStream && \
-wmake libso libgmshFoam && \
-wmake gmsh2ToFoam && \
-wmake foamToGmsh && \
-wmake foamMeshToGmsh && \
-wmake gmshFoamMonitor && \
+wmake $makeType libgmshMessageStream
+wmake $makeType libgmshFoam
+wmake ${1:-all} gmsh2ToFoam
+wmake ${1:-all} foamToGmsh
+wmake ${1:-all} foamMeshToGmsh
+wmake ${1:-all} gmshFoamMonitor
 cp gmshFoam ${FOAM_USER_APPBIN}

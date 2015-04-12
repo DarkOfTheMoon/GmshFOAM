@@ -6,8 +6,8 @@ gmshMesh/gmshMesh.C
 gmshToPolyMesh/gmshToPolyMesh.C
 polyMeshConversion/polyMeshConversion.C
 polyMeshToGmsh/polyMeshToGmsh.C
-// disabled for now:
-//polyMeshFromShapeMesh.C
+/* disabled for now:*/
+/*polyMeshFromShapeMesh.C*/
 
 gmshViews/gmshViewBase.C
 gmshViews/gmshViewPointMesh.C
