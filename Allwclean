@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -x
+
+(cd libgmshMessageStream; wclean)
+(cd libgmshFoam; wclean)
+(cd gmsh2ToFoam; wclean)
+(cd foamToGmsh; wclean)
+(cd gmshFoamMonitor; wclean)
+find . -name '*.stackdump' -exec rm \{\} \;

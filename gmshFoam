@@ -1,0 +1,112 @@
+#!/bin/sh
+#------------------------------------------------------------------------------
+# =========                 |
+# \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+#  \\    /   O peration     |
+#   \\  /    A nd           | Copyright (C) 1991-2005 OpenCFD Ltd and others
+#    \\/     M anipulation  |
+#------------------------------------------------------------------------------
+# License
+#     OpenFOAM is free software; you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation; either version 2 of the License, or (at your
+#     option) any later version.
+#
+#     OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
+#     ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#     FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#     for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with OpenFOAM; if not, write to the Free Software Foundation,
+#     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+#
+# Script
+#     gmshFoam
+#
+# Description
+#     a simple script for using Gmsh as a postprocessor.
+#
+#------------------------------------------------------------------------------
+
+GMSH_VERSION=2.0.7
+
+if [ "x${WM_PROJECT_DIR}" = "x" ] ; then
+    echo $0: 'Set the OpenFOAM environment variables first.'
+    exit 1
+fi
+
+GMSH_EXE="${WM_PROJECT_INST_DIR}/${WM_ARCH}/gmsh-${GMSH_VERSION}/bin/gmsh"
+
+if [ "${WM_ARCH}" = "cygwin" ] ; then
+    GMSH_EXE="${GMSH_EXE}.exe"
+fi
+
+if [ ! -x "${GMSH_EXE}" ] ; then
+    echo $0: "${GMSH_EXE} is not executable"
+    exit 1
+fi
+
+if [  $# != 2 -a $# != 3 ]; then
+    echo $0: 'Wrong number of arguments'
+	echo 'Usage: gmshFoam <root> <case> [<.geo or .msh> or -monitor]'
+    exit 1
+fi
+
+ROOT=$1
+if [ "$ROOT" = "." -o "$ROOT" = "./" ] ; then
+    ROOT=`pwd`
+fi
+
+CASE=$2
+CASE_DIR=$ROOT/$CASE
+
+if [ ! -d $CASE_DIR ]; then
+    echo $0: case directory $CASE_DIR does not exist, exiting
+    exit 0
+fi
+
+cd $CASE_DIR
+
+if [ $# = 2 ] ; then
+    if [ ! -r system/controlDict ]; then
+        echo $0: system/controlDict does not exist in case directory $CASE_DIR, exiting
+        exit 0
+    fi
+    ${GMSH_EXE} -p system/controlDict
+elif [ $# = 3 ] ; then
+    if [ $3 = "-monitor" ] ; then
+	${GMSH_EXE} -s -option /dev/stdin <<EOF 
+	    Solver.Name1="OpenFOAM case monitor";
+	    Solver.Executable1="gmshFoamMonitor";
+	    Solver.Help1="Monitors a case directory at the specified interval
+and visualizes the newest field data on-the-fly.";
+	    Solver.OptionCommand1="";
+	    Solver.NameCommand1="${ROOT} ${CASE}";
+	    Solver.FirstOption1="Interval [sec.]";
+	    Solver.FirstButton1="Start";
+	    Solver.FirstButtonCommand1="-monitor %s";
+	    Solver.ClientServer1=1;
+	    Solver.MergeViews1=1;
+	    Solver.PopupMessages1=1;
+EOF
+## Old monitoring implementation - simple but too inefficient.
+#	${GMSH_EXE} /dev/stdin <<EOF 
+#	    endIter=2^31-1;
+#	    View.ShowTime=2;
+#	    PostProcessing.FoamStartTime="latestTime";
+#	    For(0:endIter:1)
+#		Merge "${CASE_DIR}/system/controlDict";
+#		Draw;
+#		Sleep 10;
+#		For viewI In {0:PostProcessing.NbViews-1}
+#		    Delete View[0];
+#		EndFor
+#	    EndFor
+#EOF
+    else
+        ${GMSH_EXE} -m $3 -o "${CASE_DIR}.foam" -format foam
+    fi
+fi
+
+#------------------------------------------------------------------------------

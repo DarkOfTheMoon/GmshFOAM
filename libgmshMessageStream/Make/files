@@ -1,0 +1,3 @@
+gmshMessageStream.C
+
+LIB = $(FOAM_USER_LIBBIN)/libgmshMessageStream

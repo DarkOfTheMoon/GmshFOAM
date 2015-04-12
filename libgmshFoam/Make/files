@@ -1,0 +1,18 @@
+gmshMesh/gmshMeshFormat.C
+gmshMesh/gmshPhysicalNames.C
+gmshMesh/gmshNodes.C
+gmshMesh/gmshElements.C
+gmshMesh/gmshMesh.C
+polyMeshConversion/polyMeshConversion.C
+// disabled for now:
+//polyMeshFromShapeMesh.C
+gmshToPolyMesh.C
+
+gmshViews/gmshViewBase.C
+gmshViews/gmshView.C
+gmshViews/gmshViewMeshMotion.C
+// disabled for now:
+//gmshViews/gmshViewPointMesh.C
+gmshViews/gmshViews.C
+
+LIB = $(FOAM_USER_LIBBIN)/libgmshFoam

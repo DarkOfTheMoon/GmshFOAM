@@ -1,0 +1,1416 @@
+--- gmsh-2.0.7/Common/CommandLine.cpp	2007-03-31 18:38:03.000000000 +0900
++++ gmsh-2.0.7.new/Common/CommandLine.cpp	2007-04-05 10:16:14.000000000 +0900
+@@ -82,7 +82,7 @@
+   Msg(DIRECT, "  -saveall              Save all elements (discard physical group definitions)");
+   Msg(DIRECT, "  -o file               Specify mesh output file name");
+   Msg(DIRECT, "  -format string        Set output mesh format (msh, msh1, msh2, unv, vrml, stl, mesh");
+-  Msg(DIRECT, "                        bdf, p3d, cgns, med)");
++  Msg(DIRECT, "                        bdf, p3d, cgns, med, foam)");
+   Msg(DIRECT, "  -algo string          Select mesh algorithm (iso, netgen, tetgen)");
+   Msg(DIRECT, "  -smooth int           Set number of mesh smoothing steps");
+   Msg(DIRECT, "  -optimize             Optimize quality of tetrahedral elements");
+@@ -166,6 +166,9 @@
+ #if defined(HAVE_MED)
+     strcat(opt, "MED ");
+ #endif
++#if defined(HAVE_FOAM)
++    strcat(opt, "FOAM ");
++#endif
+     first = 0;
+   }
+   return opt;
+@@ -410,6 +413,8 @@
+             CTX.mesh.format = FORMAT_CGNS;
+           else if(!strcmp(argv[i], "med"))
+             CTX.mesh.format = FORMAT_MED;
++          else if(!strcmp(argv[i], "foam"))
++            CTX.mesh.format = FORMAT_FOAM;
+           else {
+             fprintf(stderr, ERROR_STR "Unknown mesh format\n");
+             exit(1);
+--- gmsh-2.0.7/Common/Context.h	2007-03-20 07:34:12.000000000 +0900
++++ gmsh-2.0.7.new/Common/Context.h	2007-04-10 09:56:20.000000000 +0900
+@@ -185,6 +185,7 @@
+       return val;
+     }
+     int save_all, stl_binary, msh_binary, bdf_field_format;
++    int foam_remove_unused_points, foam_renumber_mesh;
+     char *triangle_options;
+     int smooth_normals, reverse_all_normals;
+     double angle_smooth_normals;
+@@ -198,6 +199,7 @@
+     int smooth, anim_cycle, combine_time, combine_remove_orig ;
+     int file_format, plugins;
+     double anim_delay ;
++    char *foam_start_time;
+     void (*plugin_draw_function)(void) ;
+   }post;
+ 
+--- gmsh-2.0.7/Common/DefaultOptions.h	2007-03-20 07:34:12.000000000 +0900
++++ gmsh-2.0.7.new/Common/DefaultOptions.h	2007-04-10 09:43:05.000000000 +0900
+@@ -375,6 +375,9 @@
+ } ;
+ 
+ StringXString PostProcessingOptions_String[] = {
++  { F|O, "FoamStartTime" , opt_post_foam_start_time , "" ,
++    "The time name where reading the OpenFOAM case starts (\"latestTime\" for only the latest time)" },
++
+   { 0, NULL , NULL , NULL , NULL }
+ } ;
+ 
+@@ -913,8 +916,13 @@
+   { F|O, "Explode" , opt_mesh_explode , 1.0 ,
+     "Element shrinking factor (between 0 and 1)" },
+ 
++  { F|O, "FoamRemoveUnusedPoints", opt_mesh_foam_remove_unused_points, 1. ,
++    "Remove unused points (the centers of circular arcs etc.) from OpenFOAM mesh?" },
++  { F|O, "FoamRenumberMesh", opt_mesh_foam_renumber_mesh, 1. ,
++    "Renumber OpenFOAM mesh for matrix bandwidth compression?" },
++
+   { F|O, "Format" , opt_mesh_format , FORMAT_MSH , 
+-    "Mesh output format (1=msh, 2=unv, 19=vrml, 27=stl, 30=mesh, 31=bdf, 32=cgns, 33=med)" },
++    "Mesh output format (1=msh, 2=unv, 19=vrml, 27=stl, 30=mesh, 31=bdf, 32=cgns, 33=med, 34=foam)" },
+ 
+   { F|O, "Hexahedra" , opt_mesh_hexahedra , 1. , 
+     "Display mesh hexahedra?" },
+--- gmsh-2.0.7/Common/GmshDefines.h	2007-03-01 01:59:19.000000000 +0900
++++ gmsh-2.0.7.new/Common/GmshDefines.h	2007-04-05 10:16:14.000000000 +0900
+@@ -31,6 +31,7 @@
+ #define FORMAT_BDF           31
+ #define FORMAT_CGNS          32
+ #define FORMAT_MED           33
++#define FORMAT_FOAM          34
+ 
+ // Element types in .msh file format
+ #define MSH_LIN_2  1
+--- gmsh-2.0.7/Common/Options.cpp	2007-03-20 07:34:12.000000000 +0900
++++ gmsh-2.0.7.new/Common/Options.cpp	2007-04-10 09:56:53.000000000 +0900
+@@ -1882,6 +1882,12 @@
+   return opt_solver_fifth_button_command(4, action, val);
+ }
+ 
++char *opt_post_foam_start_time(OPT_ARGS_STR){
++  if(action & GMSH_SET)
++    CTX.post.foam_start_time = val;
++  return CTX.post.foam_start_time;
++}
++
+ #if defined(HAVE_FLTK)
+ int _gui_action_valid(int action, int num)
+ {
+@@ -4660,6 +4666,20 @@
+   return CTX.mesh.light_two_side;
+ }
+ 
++double opt_mesh_foam_remove_unused_points(OPT_ARGS_NUM)
++{
++  if(action & GMSH_SET)
++    CTX.mesh.foam_remove_unused_points = (int)val;
++  return CTX.mesh.foam_remove_unused_points;
++}
++
++double opt_mesh_foam_renumber_mesh(OPT_ARGS_NUM)
++{
++  if(action & GMSH_SET)
++    CTX.mesh.foam_renumber_mesh = (int)val;
++  return CTX.mesh.foam_renumber_mesh;
++}
++
+ double opt_mesh_format(OPT_ARGS_NUM)
+ {
+   if(action & GMSH_SET)
+--- gmsh-2.0.7/Common/Options.h	2007-03-20 07:34:12.000000000 +0900
++++ gmsh-2.0.7.new/Common/Options.h	2007-04-10 09:57:23.000000000 +0900
+@@ -199,6 +199,7 @@
+ char * opt_solver_fifth_button_command2(OPT_ARGS_STR);
+ char * opt_solver_fifth_button_command3(OPT_ARGS_STR);
+ char * opt_solver_fifth_button_command4(OPT_ARGS_STR);
++char * opt_post_foam_start_time(OPT_ARGS_STR);
+ char * opt_view_name(OPT_ARGS_STR);
+ char * opt_view_format(OPT_ARGS_STR);
+ char * opt_view_filename(OPT_ARGS_STR);
+@@ -456,6 +457,8 @@
+ double opt_mesh_light(OPT_ARGS_NUM);
+ double opt_mesh_light_lines(OPT_ARGS_NUM);
+ double opt_mesh_light_two_side(OPT_ARGS_NUM);
++double opt_mesh_foam_remove_unused_points(OPT_ARGS_NUM);
++double opt_mesh_foam_renumber_mesh(OPT_ARGS_NUM);
+ double opt_mesh_format(OPT_ARGS_NUM);
+ double opt_mesh_msh_file_version(OPT_ARGS_NUM);
+ double opt_mesh_msh_binary(OPT_ARGS_NUM);
+--- gmsh-2.0.7/Common/Views.h	2007-02-27 00:49:19.000000000 +0900
++++ gmsh-2.0.7.new/Common/Views.h	2007-04-05 10:16:14.000000000 +0900
+@@ -212,6 +212,9 @@
+ bool RemoveViewByIndex(int index);
+ bool RemoveViewByNumber(int num);
+ int ReadView(char *filename);
++#if defined(HAVE_FOAM)
++int ReadViewFOAM(char *filename);
++#endif
+ void WriteView(Post_View *v, char *filename, int format, int append);
+ void CopyViewOptions(Post_View *src, Post_View *dest);
+ void CombineViews(int time, int how, int remove);
+--- gmsh-2.0.7/Common/ViewsIO.cpp	2007-01-24 19:54:25.000000000 +0900
++++ gmsh-2.0.7.new/Common/ViewsIO.cpp	2007-04-10 10:02:13.000000000 +0900
+@@ -19,6 +19,18 @@
+ // 
+ // Please report all bugs and problems to <gmsh@geuz.org>.
+ 
++#if defined(HAVE_FOAM)
++extern "C" {
++// for FILE* in Options.h
++#include <stdio.h>
++// for getcwd()
++#include <unistd.h>
++};
++#include "Options.h"
++
++#include "gmshViews.H"
++#endif
++
+ #include <set>
+ #include "Gmsh.h"
+ #include "Numeric.h"
+@@ -320,6 +332,322 @@
+   return 1;
+ }
+ 
++#if defined(HAVE_FOAM)
++static void ReadViewFOAMSub(Foam::gmshViewBase *gVPtr, Post_View *v,
++                            char *filename)
++{
++  int nb, t2l, t3l;
++
++  Foam::gmshViewBase& gV = *gVPtr;
++
++  // get the format
++  Foam::gmshViewBase::gmshPostFormat pF;
++  gV.getPostFormat(pF);
++
++  // get the header information
++  Foam::gmshViewBase::gmshViewHeader vH;
++  gV.getViewHeader(vH);
++
++  // name is allocated in vH.name
++  v->NbTimeStep = vH.NbTimeStep;
++  v->NbSP = vH.Nb[Foam::gmshViewBase::SP];
++  v->NbVP = vH.Nb[Foam::gmshViewBase::VP];
++  v->NbTP = vH.Nb[Foam::gmshViewBase::TP];
++  v->NbSL = vH.Nb[Foam::gmshViewBase::SL];
++  v->NbVL = vH.Nb[Foam::gmshViewBase::VL];
++  v->NbTL = vH.Nb[Foam::gmshViewBase::TL];
++  v->NbST = vH.Nb[Foam::gmshViewBase::ST];
++  v->NbVT = vH.Nb[Foam::gmshViewBase::VT];
++  v->NbTT = vH.Nb[Foam::gmshViewBase::TT];
++  v->NbSQ = vH.Nb[Foam::gmshViewBase::SQ];
++  v->NbVQ = vH.Nb[Foam::gmshViewBase::VQ];
++  v->NbTQ = vH.Nb[Foam::gmshViewBase::TQ];
++  v->NbSS = vH.Nb[Foam::gmshViewBase::SS];
++  v->NbVS = vH.Nb[Foam::gmshViewBase::VS];
++  v->NbTS = vH.Nb[Foam::gmshViewBase::TS];
++  v->NbSH = vH.Nb[Foam::gmshViewBase::SH];
++  v->NbVH = vH.Nb[Foam::gmshViewBase::VH];
++  v->NbTH = vH.Nb[Foam::gmshViewBase::TH];
++  v->NbSI = vH.Nb[Foam::gmshViewBase::SI];
++  v->NbVI = vH.Nb[Foam::gmshViewBase::VI];
++  v->NbTI = vH.Nb[Foam::gmshViewBase::TI];
++  v->NbSY = vH.Nb[Foam::gmshViewBase::SY];
++  v->NbVY = vH.Nb[Foam::gmshViewBase::VY];
++  v->NbTY = vH.Nb[Foam::gmshViewBase::TY];
++  v->NbSL2 = vH.Nb[Foam::gmshViewBase::SL2];
++  v->NbVL2 = vH.Nb[Foam::gmshViewBase::VL2];
++  v->NbTL2 = vH.Nb[Foam::gmshViewBase::TL2];
++  v->NbST2 = vH.Nb[Foam::gmshViewBase::ST2];
++  v->NbVT2 = vH.Nb[Foam::gmshViewBase::VT2];
++  v->NbTT2 = vH.Nb[Foam::gmshViewBase::TT2];
++  v->NbSQ2 = vH.Nb[Foam::gmshViewBase::SQ2];
++  v->NbVQ2 = vH.Nb[Foam::gmshViewBase::VQ2];
++  v->NbTQ2 = vH.Nb[Foam::gmshViewBase::TQ2];
++  v->NbSS2 = vH.Nb[Foam::gmshViewBase::SS2];
++  v->NbVS2 = vH.Nb[Foam::gmshViewBase::VS2];
++  v->NbTS2 = vH.Nb[Foam::gmshViewBase::TS2];
++  v->NbSH2 = vH.Nb[Foam::gmshViewBase::SH2];
++  v->NbVH2 = vH.Nb[Foam::gmshViewBase::VH2];
++  v->NbTH2 = vH.Nb[Foam::gmshViewBase::TH2];
++  v->NbSI2 = vH.Nb[Foam::gmshViewBase::SI2];
++  v->NbVI2 = vH.Nb[Foam::gmshViewBase::VI2];
++  v->NbTI2 = vH.Nb[Foam::gmshViewBase::TI2];
++  v->NbSY2 = vH.Nb[Foam::gmshViewBase::SY2];
++  v->NbVY2 = vH.Nb[Foam::gmshViewBase::VY2];
++  v->NbTY2 = vH.Nb[Foam::gmshViewBase::TY2];
++  v->NbT2 = vH.NbT2; t2l = vH.t2l; v->NbT3 = vH.NbT3; t3l = vH.t3l;
++
++  for(int i = 0; i < (int)strlen(vH.name); i++)
++    if(vH.name[i] == '^')
++      vH.name[i] = ' ';
++
++  v->DataSize = pF.size;
++
++  v->Time = List_Create(v->NbTimeStep, 100, pF.size);
++  v->Time->n = v->NbTimeStep;
++  gV.getTimeStepValues(v->Time->array);
++
++#define LCD(E)   if(!nb){v->E = List_Create(1, 1000, pF.size);} \
++        else{v->E = List_Create(nb, 1000, pF.size); v->E->n = nb;}
++
++  // Points
++  nb = v->NbSP ? v->NbSP * (v->NbTimeStep * 1 + 3) : 0; LCD(SP);
++  nb = v->NbVP ? v->NbVP * (v->NbTimeStep * 3 + 3) : 0; LCD(VP);
++  nb = v->NbTP ? v->NbTP * (v->NbTimeStep * 9 + 3) : 0; LCD(TP);
++
++  // Lines
++  nb = v->NbSL ? v->NbSL * (v->NbTimeStep * 2 * 1 + 6) : 0; LCD(SL);
++  nb = v->NbVL ? v->NbVL * (v->NbTimeStep * 2 * 3 + 6) : 0; LCD(VL);
++  nb = v->NbTL ? v->NbTL * (v->NbTimeStep * 2 * 9 + 6) : 0; LCD(TL);
++
++  // Triangles
++  nb = v->NbST ? v->NbST * (v->NbTimeStep * 3 * 1 + 9) : 0; LCD(ST);
++  nb = v->NbVT ? v->NbVT * (v->NbTimeStep * 3 * 3 + 9) : 0; LCD(VT);
++  nb = v->NbTT ? v->NbTT * (v->NbTimeStep * 3 * 9 + 9) : 0; LCD(TT);
++
++  // Quadrangles
++  nb = v->NbSQ ? v->NbSQ * (v->NbTimeStep * 4 * 1 + 12) : 0; LCD(SQ);
++  nb = v->NbVQ ? v->NbVQ * (v->NbTimeStep * 4 * 3 + 12) : 0; LCD(VQ);
++  nb = v->NbTQ ? v->NbTQ * (v->NbTimeStep * 4 * 9 + 12) : 0; LCD(TQ);
++
++  // Tetrahedra
++  nb = v->NbSS ? v->NbSS * (v->NbTimeStep * 4 * 1 + 12) : 0; LCD(SS);
++  nb = v->NbVS ? v->NbVS * (v->NbTimeStep * 4 * 3 + 12) : 0; LCD(VS);
++  nb = v->NbTS ? v->NbTS * (v->NbTimeStep * 4 * 9 + 12) : 0; LCD(TS);
++
++  // Hexahedra
++  nb = v->NbSH ? v->NbSH * (v->NbTimeStep * 8 * 1 + 24) : 0; LCD(SH);
++  nb = v->NbVH ? v->NbVH * (v->NbTimeStep * 8 * 3 + 24) : 0; LCD(VH);
++  nb = v->NbTH ? v->NbTH * (v->NbTimeStep * 8 * 9 + 24) : 0; LCD(TH);
++
++  // Prisms
++  nb = v->NbSI ? v->NbSI * (v->NbTimeStep * 6 * 1 + 18) : 0; LCD(SI);
++  nb = v->NbVI ? v->NbVI * (v->NbTimeStep * 6 * 3 + 18) : 0; LCD(VI);
++  nb = v->NbTI ? v->NbTI * (v->NbTimeStep * 6 * 9 + 18) : 0; LCD(TI);
++
++  // Pyramids
++  nb = v->NbSY ? v->NbSY * (v->NbTimeStep * 5 * 1 + 15) : 0; LCD(SY);
++  nb = v->NbVY ? v->NbVY * (v->NbTimeStep * 5 * 3 + 15) : 0; LCD(VY);
++  nb = v->NbTY ? v->NbTY * (v->NbTimeStep * 5 * 9 + 15) : 0; LCD(TY);
++
++  // 2nd order Lines
++  nb = v->NbSL2 ? v->NbSL2 * (v->NbTimeStep * 3 * 1 + 9) : 0; LCD(SL2);
++  nb = v->NbVL2 ? v->NbVL2 * (v->NbTimeStep * 3 * 3 + 9) : 0; LCD(VL2);
++  nb = v->NbTL2 ? v->NbTL2 * (v->NbTimeStep * 3 * 9 + 9) : 0; LCD(TL2);
++
++  // 2nd order Triangles
++  nb = v->NbST2 ? v->NbST2 * (v->NbTimeStep * 6 * 1 + 18) : 0; LCD(ST2);
++  nb = v->NbVT2 ? v->NbVT2 * (v->NbTimeStep * 6 * 3 + 18) : 0; LCD(VT2);
++  nb = v->NbTT2 ? v->NbTT2 * (v->NbTimeStep * 6 * 9 + 18) : 0; LCD(TT2);
++
++  // 2nd order Quadrangles
++  nb = v->NbSQ2 ? v->NbSQ2 * (v->NbTimeStep * 9 * 1 + 27) : 0; LCD(SQ2);
++  nb = v->NbVQ2 ? v->NbVQ2 * (v->NbTimeStep * 9 * 3 + 27) : 0; LCD(VQ2);
++  nb = v->NbTQ2 ? v->NbTQ2 * (v->NbTimeStep * 9 * 9 + 27) : 0; LCD(TQ2);
++
++  // 2nd order Tetrahedra
++  nb = v->NbSS2 ? v->NbSS2 * (v->NbTimeStep * 10 * 1 + 30) : 0; LCD(SS2);
++  nb = v->NbVS2 ? v->NbVS2 * (v->NbTimeStep * 10 * 3 + 30) : 0; LCD(VS2);
++  nb = v->NbTS2 ? v->NbTS2 * (v->NbTimeStep * 10 * 9 + 30) : 0; LCD(TS2);
++
++  // 2nd order Hexahedra
++  nb = v->NbSH2 ? v->NbSH2 * (v->NbTimeStep * 27 * 1 + 81) : 0; LCD(SH2);
++  nb = v->NbVH2 ? v->NbVH2 * (v->NbTimeStep * 27 * 3 + 81) : 0; LCD(VH2);
++  nb = v->NbTH2 ? v->NbTH2 * (v->NbTimeStep * 27 * 9 + 81) : 0; LCD(TH2);
++
++  // 2nd order Prisms
++  nb = v->NbSI2 ? v->NbSI2 * (v->NbTimeStep * 18 * 1 + 54) : 0; LCD(SI2);
++  nb = v->NbVI2 ? v->NbVI2 * (v->NbTimeStep * 18 * 3 + 54) : 0; LCD(VI2);
++  nb = v->NbTI2 ? v->NbTI2 * (v->NbTimeStep * 18 * 9 + 54) : 0; LCD(TI2);
++
++  // 2nd order Pyramids
++  nb = v->NbSY2 ? v->NbSY2 * (v->NbTimeStep * 14 * 1 + 42) : 0; LCD(SY2);
++  nb = v->NbVY2 ? v->NbVY2 * (v->NbTimeStep * 14 * 3 + 42) : 0; LCD(VY2);
++  nb = v->NbTY2 ? v->NbTY2 * (v->NbTimeStep * 14 * 9 + 42) : 0; LCD(TY2);
++#undef LCD
++
++  // 2D strings
++  nb = v->NbT2 ? v->NbT2 * 4 : 0;
++  if(!nb) {
++    v->T2D = List_Create(1, 100, pF.size);
++  } else {
++    v->T2D = List_Create(nb, 100, pF.size); v->T2D->n = nb;
++  }
++  if(!t2l) {
++    v->T2C = List_Create(1, 100, sizeof(char));
++  } else {
++    v->T2C = List_Create(t2l, 100, sizeof(char)); v->T2C->n = t2l;
++  }
++
++  // 3D strings
++  nb = v->NbT3 ? v->NbT3 * 5 : 0;
++  if(!nb) {
++    v->T3D = List_Create(1, 100, pF.size);
++  } else {
++    v->T3D = List_Create(nb, 100, pF.size); v->T3D->n = nb;
++  }
++  if(!t3l) {
++    v->T3C = List_Create(1, 100, sizeof(char));
++  } else {
++    v->T3C = List_Create(t3l, 100, sizeof(char)); v->T3C->n = t3l;
++  }
++
++
++  Foam::gmshViewBase::gmshViewBuffer vB = {
++    {
++      v->SP->array, v->VP->array, v->TP->array,
++      v->SL->array, v->VL->array, v->TL->array,
++      v->ST->array, v->VT->array, v->TT->array,
++      v->SQ->array, v->VQ->array, v->TQ->array,
++      v->SS->array, v->VS->array, v->TS->array,
++      v->SH->array, v->VH->array, v->TH->array,
++      v->SI->array, v->VI->array, v->TI->array,
++      v->SY->array, v->VY->array, v->TY->array,
++      v->SL2->array, v->VL2->array, v->TL2->array,
++      v->ST2->array, v->VT2->array, v->TT2->array,
++      v->SQ2->array, v->VQ2->array, v->TQ2->array,
++      v->SS2->array, v->VS2->array, v->TS2->array,
++      v->SH2->array, v->VH2->array, v->TH2->array,
++      v->SI2->array, v->VI2->array, v->TI2->array,
++      v->SY2->array, v->VY2->array, v->TY2->array
++    },
++    v->T2D->array, v->T2C->array, v->T3D->array, v->T3C->array
++  };
++
++  // get view data
++  gV.getViewData(vB);
++
++  // finalize the view
++  EndView(v, 0, filename, vH.name);
++
++}
++
++// Read view from a OpenFOAM case
++int ReadViewFOAM(char *filename)
++{
++  Foam::fileName fName(filename);
++  if(fName.name() != "controlDict")
++    {
++      Msg(GERROR, "The specified file %s is not a controlDict.",
++          fName.c_str());
++    }
++
++  if(fName[0] != '/')
++    {
++      char dirbuf[1024];
++      if(getcwd(dirbuf, 1024) == NULL)
++        {
++          Msg(GERROR, "Can't get the current directory path.");
++          return 0;
++        }
++      fName = dirbuf/fName;
++    }
++  fName = fName.path(); // strip "controlDict"
++  fName = fName.path(); // strip "system"
++  Msg(INFO, "Reading the case in %s", fName.c_str());
++
++  // initialization and validity check
++  Foam::gmshViews::gmshViewsOptions opt;
++  opt.nOptions_ = 2;
++  opt.splitTimeStepsByMeshMotion_ = false;
++  opt.startTimeStr_ = CTX.post.foam_start_time;
++  opt.verbosity_ = CTX.verbosity;
++  bool good;
++  Foam::gmshViews views(good, fName, ".", opt);
++  if(!good)
++    {
++      Msg(GERROR, "No valid field found.");
++      return 0;
++    }
++
++  Foam::gmshViewBase* gVPtr;
++
++  // we currently have at most 3 mesh types
++  // (vol, surface, point)
++  enum Foam::gmshViewBase::meshTypes meshTypes[3];
++  int meshViews[3];
++
++  // get the mesh motions if the mesh moves
++  int nMeshTypes;
++  for(nMeshTypes = 0; (gVPtr = views.getNextMeshMotion()) != NULL;
++      nMeshTypes++)
++    {
++      Post_View *v;
++      v = BeginView(0);
++
++      // read meshes
++      ReadViewFOAMSub(gVPtr, v, filename);
++
++      // for assigning the motion view to the GeneralizedRaise feature
++      meshTypes[nMeshTypes] = gVPtr->meshType();
++      meshViews[nMeshTypes] = v->Index;
++
++      // hide the mesh motion view
++      opt_view_visible(v->Index, GMSH_SET, 0);
++    }
++
++  // get the next view
++  while((gVPtr = views.getNextView()) != NULL)
++    {
++      Post_View *v;
++      v = BeginView(0);
++
++      // read the view
++      ReadViewFOAMSub(gVPtr, v, filename);
++
++      if(views.isMeshMotion())
++        {
++          // link the mesh motion to the GeneralizedRaise feature of the view
++          int motionI = 0;
++          while(motionI < nMeshTypes
++                && meshTypes[motionI] != gVPtr->meshType())
++            motionI++;
++
++          if(motionI >= nMeshTypes)
++            {
++              // this should not happen
++              Msg(GERROR, "Can't find a mesh motion");
++              // issue an error, but continue
++            } else {
++              opt_view_use_gen_raise(v->Index, GMSH_SET, 1.0);
++              opt_view_gen_raise_view(v->Index, GMSH_SET, meshViews[motionI]);
++              opt_view_gen_raise_factor(v->Index, GMSH_SET, 1.0);
++              opt_view_gen_raise0(v->Index, GMSH_SET, "v0");
++              opt_view_gen_raise1(v->Index, GMSH_SET, "v1");
++              opt_view_gen_raise2(v->Index, GMSH_SET, "v2");
++            }
++        }
++    }
++
++#if defined(HAVE_FLTK)
++  // don't update the ui after each view, but only at the end
++  UpdateViewsInGUI();
++#endif
++
++  return 1;
++}
++#endif // HAVE_FOAM
++
+ // Write view to file in Parsed, ASCII or Binary format
+ 
+ static void write_parsed_time(List_T *list, FILE *fp)
+--- gmsh-2.0.7/Fltk/Callbacks.cpp	2007-04-03 18:40:12.000000000 +0900
++++ gmsh-2.0.7.new/Fltk/Callbacks.cpp	2007-04-05 10:16:14.000000000 +0900
+@@ -607,6 +607,9 @@
+   "\tI-deas universal mesh (*.unv)"
+   "\tMedit mesh (*.mesh)"
+   "\tNastran bulk data file (*.bdf)"
++#if defined(HAVE_FOAM)
++  "\tOpenFOAM case (controlDict)"
++#endif
+   "\tPlot3D structured mesh (*.p3d)"
+   "\tSTL surface mesh (*.stl)"
+   "\tVRML surface mesh (*.wrl)"
+@@ -655,6 +658,7 @@
+ int _save_med(char *name){ return generic_mesh_dialog(name, "MED Options", FORMAT_MED); }
+ int _save_mesh(char *name){ return generic_mesh_dialog(name, "MESH Options", FORMAT_MESH); }
+ int _save_bdf(char *name){ return bdf_dialog(name); }
++int _save_foam(char *name){ return foam_dialog(name); }
+ int _save_p3d(char *name){ return generic_mesh_dialog(name, "P3D Options", FORMAT_P3D); }
+ int _save_stl(char *name){ return stl_dialog(name); }
+ int _save_vrml(char *name){ return generic_mesh_dialog(name, "VRML Options", FORMAT_VRML); }
+@@ -681,6 +685,7 @@
+   case FORMAT_MED  : return _save_med(name);
+   case FORMAT_MESH : return _save_mesh(name);
+   case FORMAT_BDF  : return _save_bdf(name);
++  case FORMAT_FOAM : return _save_foam(name);
+   case FORMAT_P3D  : return _save_p3d(name);
+   case FORMAT_STL  : return _save_stl(name);
+   case FORMAT_VRML : return _save_vrml(name);
+@@ -724,6 +729,9 @@
+ #endif
+     {"Medit mesh (*.mesh)", _save_mesh},
+     {"Nastran bulk data file (*.bdf)", _save_bdf},
++#if defined(HAVE_FOAM)
++    {"OpenFOAM polyMesh (*.foam)", _save_foam},
++#endif
+     {"Plot3D structured mesh (*.p3d)", _save_p3d},
+     {"STL surface mesh (*.stl)", _save_stl},
+     {"VRML surface mesh (*.wrl)", _save_vrml},
+--- gmsh-2.0.7/Fltk/GUI_Extras.cpp	2007-03-20 07:34:12.000000000 +0900
++++ gmsh-2.0.7.new/Fltk/GUI_Extras.cpp	2007-04-09 11:05:12.000000000 +0900
+@@ -835,6 +835,70 @@
+   return 0;
+ }
+ 
++// Save foam dialog
++
++int foam_dialog(char *name)
++{
++  struct _foam_dialog{
++    Fl_Window *window;
++    Fl_Check_Button *b[3];
++    Fl_Button *ok, *cancel;
++  };
++  static _foam_dialog *dialog = NULL;
++
++  const int BH = 2 * CTX.fontsize + 1;
++  const int BB = 7 * CTX.fontsize + 9;
++  const int WB = 7;
++
++  if(!dialog){
++    dialog = new _foam_dialog;
++    int h = 3 * WB + 4 * BH, w = 2 * BB + 3 * WB, y = WB;
++    // not a "Dialog_Window" since it is modal 
++    dialog->window = new Fl_Double_Window(w, h, "OpenFOAM Options");
++    dialog->window->box(GMSH_WINDOW_BOX);
++    dialog->b[0] = new Fl_Check_Button(WB, y, 2 * BB + WB, BH, "Save all (ignore physical groups)"); y += BH;
++    dialog->b[0]->type(FL_TOGGLE_BUTTON);
++    dialog->b[1] = new Fl_Check_Button(WB, y, 2 * BB + WB, BH, "Remove unused points"); y += BH;
++    dialog->b[1]->type(FL_TOGGLE_BUTTON);
++    dialog->b[2] = new Fl_Check_Button(WB, y, 2 * BB + WB, BH, "Renumber mesh"); y += BH;
++    dialog->b[2]->type(FL_TOGGLE_BUTTON);
++    dialog->ok = new Fl_Return_Button(WB, y + WB, BB, BH, "OK");
++    dialog->cancel = new Fl_Button(2 * WB + BB, y + WB, BB, BH, "Cancel");
++    dialog->window->set_modal();
++    dialog->window->end();
++    dialog->window->hotspot(dialog->window);
++  }
++  
++  dialog->b[0]->value(CTX.mesh.save_all ? 1 : 0);
++  dialog->b[1]->value(CTX.mesh.foam_remove_unused_points ? 1 : 0);
++  dialog->b[2]->value(CTX.mesh.foam_renumber_mesh ? 1 : 0);
++  dialog->window->show();
++
++  while(dialog->window->shown()){
++    Fl::wait();
++    for (;;) {
++      Fl_Widget* o = Fl::readqueue();
++      if (!o) break;
++      if (o == dialog->ok) {
++	opt_mesh_save_all(0, GMSH_SET | GMSH_GUI,
++                          dialog->b[0]->value() ? 1 : 0);
++	opt_mesh_foam_remove_unused_points(0, GMSH_SET | GMSH_GUI,
++                                    dialog->b[1]->value() ? 1 : 0);
++	opt_mesh_foam_renumber_mesh(0, GMSH_SET | GMSH_GUI,
++                                    dialog->b[2]->value() ? 1 : 0);
++	CreateOutputFile(name, FORMAT_FOAM);
++	dialog->window->hide();
++	return 1;
++      }
++      if (o == dialog->window || o == dialog->cancel){
++	dialog->window->hide();
++	return 0;
++      }
++    }
++  }
++  return 0;
++}
++
+ // Save stl dialog
+ 
+ int stl_dialog(char *name)
+--- gmsh-2.0.7/Fltk/GUI_Extras.h	2007-03-20 07:34:12.000000000 +0900
++++ gmsh-2.0.7.new/Fltk/GUI_Extras.h	2007-04-05 10:16:14.000000000 +0900
+@@ -38,6 +38,7 @@
+ int options_dialog(char *filename);
+ int msh_dialog(char *filename);
+ int bdf_dialog(char *filename);
++int foam_dialog(char *filename);
+ int stl_dialog(char *filename);
+ 
+ #endif
+--- gmsh-2.0.7/Geo/GModel.h	2007-03-20 07:34:12.000000000 +0900
++++ gmsh-2.0.7.new/Geo/GModel.h	2007-04-09 11:10:05.000000000 +0900
+@@ -220,6 +220,10 @@
+ 
+   // Med interface ("Modele d'Echange de Donnees")
+   int writeMED(const std::string &name);
++
++  // OpenFOAM mesh format
++  int writeFOAM(const std::string &name, const bool removeUnusedPoints,
++  const bool renumberMesh, bool saveAll=false, const double scalingFactor=1.0);
+ };
+ 
+ #endif
+--- gmsh-2.0.7/Geo/GModelIO_FOAM.cpp	1970-01-01 09:00:00.000000000 +0900
++++ gmsh-2.0.7.new/Geo/GModelIO_FOAM.cpp	2007-04-09 11:09:36.000000000 +0900
+@@ -0,0 +1,359 @@
++// $Id: GModelIO_FOAM.cpp,v 1.0 2007/03/28 12:05:16 geuzaine Exp $
++//
++// Copyright (C) 1997-2007 C. Geuzaine, J.-F. Remacle, Takuya Oshima
++//
++// This program is free software; you can redistribute it and/or modify
++// it under the terms of the GNU General Public License as published by
++// the Free Software Foundation; either version 2 of the License, or
++// (at your option) any later version.
++//
++// This program is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++//
++// You should have received a copy of the GNU General Public License
++// along with this program; if not, write to the Free Software
++// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
++// USA.
++// 
++// Please report all bugs and problems to <gmsh@geuz.org> or
++// <oshima@eng.niigata-u.ac.jp>.
++
++#include <map>
++#include <string>
++
++#if defined(HAVE_FOAM)
++
++#include "gmshToPolyMesh.H"
++#include "Time.H"
++#include "fileName.H"
++#include "banner.H"
++
++#include "Message.h"
++#include "GmshDefines.h"
++#include "GModel.h"
++#include "gmshRegion.h"
++#include "gmshFace.h"
++#include "gmshEdge.h"
++#include "MElement.h"
++#include "SBoundingBox3d.h"
++
++#include <sys/stat.h>
++#include <sys/types.h>
++
++#include "gmshMessageStream.H"
++
++static void multilineMsg(const int level, const std::string& str)
++{
++  std::string::size_type posStart = 0, pos;
++
++  pos = str.find("\n", posStart);
++  while(pos != std::string::npos)
++    {
++      Msg(level, str.substr(posStart, pos - posStart).c_str());
++      posStart = pos + 1;
++      pos = str.find("\n", posStart);
++    }
++  Msg(level, str.substr(posStart).c_str());
++}
++
++// OpenFOAM message stream handler for Gmsh
++namespace Foam {
++  // for OpenFOAM banner suppression
++  banner::banner() {}
++
++  // static data member
++  bool gmshMessageStream::isInitialized_ = false;
++
++  // the Info and Warning streams for Gmsh.
++  // these streams must be used instead of the Msg() function for preventing
++  // conflicting text outputs.
++  gmshMessageStream gNull(gmshMessageStream::gNULL);
++  gmshMessageStream gInfo(gmshMessageStream::gINFO);
++  gmshMessageStream gWarning(gmshMessageStream::gWARNING);
++  gmshMessageStream gSeriousError(gmshMessageStream::gSERIOUS);
++
++  gmshMessageStream::gmshMessageStream(errorSeverity sev)
++    : severity_(sev)
++  {
++    if(sev == gmshMessageStream::gINFO)
++      {
++        // check for unintended multiple instantiations (it will crash Gmsh!)
++        if(isInitialized_)
++          {
++            FatalError << "You have mistakenly linked multiple instances"
++              " of the gmshMessageStream class into Gmsh. Please don't link"
++              " libgmshMessageStream into Gmsh (remove -lgmshMessageStream"
++              " from your linker command line and re-link Gmsh)."
++                       << exit(FatalError);
++          }
++        else
++          isInitialized_ = true;
++      }
++  }
++
++  gmshMessageStream& endl(gmshMessageStream& os)
++  {
++    int level = DEBUG;
++
++    // we need to match the OpenFOAM severity and the Gmsh message level here
++    switch(os.severity_)
++      {
++      case gmshMessageStream::gINFO:
++        level = INFO;
++        break;
++      case gmshMessageStream::gWARNING:
++        level = WARNING;
++        break;
++      case gmshMessageStream::gSERIOUS:
++        level = GERROR;
++        break;
++      case gmshMessageStream::gFATAL:
++        level = FATAL;
++        break;
++      case gmshMessageStream::gNULL:
++        return os;
++        break;
++      }
++    multilineMsg(level, os.str_.str());
++
++    os.str_.str(std::string(""));
++    return os;
++  }
++}
++
++template<class T>
++static void writeElementsFOAM(Foam::gmshMesh& gMesh,
++                              const std::vector<T*> &ele, int saveAll,
++                              int &num, int elementary,
++                              std::vector<int> &physicals)
++{
++  for(unsigned int i = 0; i < ele.size(); i++)
++    if(saveAll)
++      {
++        int type, partition, verts[30];
++        ele[i]->writeFOAM(type, partition, verts, 0);
++        if(!type) return;
++        gMesh.insertElement(++num, type, 0, elementary, partition, verts);
++      }
++    else
++      for(unsigned int j = 0; j < physicals.size(); j++)
++        {
++          int type, partition, verts[30];
++          ele[i]->writeFOAM(type, partition, verts, physicals[j]);
++          if(!type) return;
++          gMesh.insertElement(++num, type, abs(physicals[j]), elementary,
++                              partition, verts);
++        }
++}
++
++static int createControlDict(Foam::fileName path)
++{
++  // continues even if errors occur in making directories
++  mkdir(path.c_str(), 0755);
++  Foam::fileName systemPath = path / "system";
++  mkdir(systemPath.c_str(), 0755);
++
++  Foam::fileName controlDict = systemPath / Foam::Time::controlDictName;
++  struct stat statBuf;
++  if(-1 == stat(controlDict.c_str(), &statBuf))
++    {
++      FILE *fpControlDict = fopen(controlDict.c_str(), "w");
++      if(!fpControlDict){
++        Foam::gSeriousError << "Unable to open file " << controlDict.c_str()
++                      <<  "for writing" << Foam::endl;
++        return 0;
++      }
++      fprintf(fpControlDict, "FoamFile\n{\nversion\t2.0;\nformat\tascii;\n"
++              "root\t\"\";\ncase\t\"\";\ninstance\t\"\";\nlocal\t\"\";\n"
++              "class\tdictionary;\nobject\tcontrolDict;\n}\n");
++      fprintf(fpControlDict, "startFrom\tstartTime;\nstartTime\t0;\n"
++              "stopAt\tendTime;\nendTime\t1;\ndeltaT\t1;\n"
++              "writeControl\ttimeStep;\nwriteInterval\t1;\npurgeWrite\t0;\n"
++              "writeFormat\tascii;\nwritePrecision\t6;\n"
++              "writeCompression\tuncompressed;\ntimeFormat\tgeneral;\n"
++              "timePrecision\t6;\nrunTimeModifiable\tyes;\n");
++      fclose(fpControlDict);
++    }
++  else
++    {
++      if(!(statBuf.st_mode & S_IRUSR))
++        {
++          Foam::gSeriousError << "No read permission for file "
++                        << controlDict.c_str() << "." << Foam::endl;
++          return 0;
++        }
++    }
++  return 1;
++}
++
++int GModel::writeFOAM(const std::string &name, const bool removeUnusedPoints,
++                      const bool renumberMesh, bool saveAll,
++                      const double scalingFactor)
++{
++  // if there are no physicals we save all the elements
++  if(noPhysicalGroups()) saveAll = true;
++
++  // get the number of vertices and renumber the vertices in a
++  // continuous sequence
++  int numVertices = renumberMeshVertices();
++  
++  // get the number of elements (we assume that all the elements in a
++  // list have the same type, i.e., they are all of the same
++  // polynomial order)
++  std::map<int,int> elements;
++  for(viter it = firstVertex(); it != lastVertex(); ++it){
++    int p = (saveAll ? 1 : (*it)->physicals.size());
++    int n = p * (*it)->mesh_vertices.size();
++    if(n) elements[MSH_PNT] += n;
++  }
++  for(eiter it = firstEdge(); it != lastEdge(); ++it){
++    int p = (saveAll ? 1 : (*it)->physicals.size());
++    int n = p * (*it)->lines.size();
++    if(n) elements[(*it)->lines[0]->getTypeForMSH()] += n;
++  }
++  for(fiter it = firstFace(); it != lastFace(); ++it){
++    int p = (saveAll ? 1 : (*it)->physicals.size());
++    int n = p * (*it)->triangles.size();
++    if(n) elements[(*it)->triangles[0]->getTypeForMSH()] += n;
++    n = p * (*it)->quadrangles.size();
++    if(n) elements[(*it)->quadrangles[0]->getTypeForMSH()] += n;
++  }
++  for(riter it = firstRegion(); it != lastRegion(); ++it){
++    int p = (saveAll ? 1 : (*it)->physicals.size());
++    int n = p * (*it)->tetrahedra.size();
++    if(n) elements[(*it)->tetrahedra[0]->getTypeForMSH()] += n;
++    n = p * (*it)->hexahedra.size();
++    if(n) elements[(*it)->hexahedra[0]->getTypeForMSH()] += n;
++    n = p * (*it)->prisms.size();
++    if(n) elements[(*it)->prisms[0]->getTypeForMSH()] += n;
++    n = p * (*it)->pyramids.size();
++    if(n) elements[(*it)->pyramids[0]->getTypeForMSH()] += n;
++  }
++
++  int numElements = 0;
++  std::map<int,int>::const_iterator it = elements.begin();
++  for(; it != elements.end(); ++it)
++    numElements += it->second;
++
++  // starting conversion
++
++  // General.Verbosity defaults to 3
++  Foam::gmshMesh gMesh(CTX.verbosity);
++
++  // insert physical names
++  if(numPhysicalNames()){
++    gMesh.setNPhysicalNames(numPhysicalNames());
++    for(piter it = firstPhysicalName(); it != lastPhysicalName(); it++)
++      gMesh.insertPhysicalNames(it->first, it->second.c_str());
++  }
++
++  // insert nodes
++  gMesh.setNVerts(numVertices);
++  for(viter it = firstVertex(); it != lastVertex(); ++it)
++    for(unsigned int i = 0; i < (*it)->mesh_vertices.size(); i++)
++      {
++        MVertex& mv = *((*it)->mesh_vertices[i]);
++        gMesh.insertNode(mv.getNum(), mv.x() * scalingFactor,
++                         mv.y() * scalingFactor, mv.z() * scalingFactor);
++      }
++  for(eiter it = firstEdge(); it != lastEdge(); ++it)
++    for(unsigned int i = 0; i < (*it)->mesh_vertices.size(); i++)
++      {
++        MVertex& mv = *((*it)->mesh_vertices[i]);
++        gMesh.insertNode(mv.getNum(), mv.x() * scalingFactor,
++                         mv.y() * scalingFactor, mv.z() * scalingFactor);
++      }
++  for(fiter it = firstFace(); it != lastFace(); ++it)
++    for(unsigned int i = 0; i < (*it)->mesh_vertices.size(); i++) 
++      {
++        MVertex& mv = *((*it)->mesh_vertices[i]);
++        gMesh.insertNode(mv.getNum(), mv.x() * scalingFactor,
++                         mv.y() * scalingFactor, mv.z() * scalingFactor);
++      }
++  for(riter it = firstRegion(); it != lastRegion(); ++it)
++    for(unsigned int i = 0; i < (*it)->mesh_vertices.size(); i++) 
++      {
++        MVertex& mv = *((*it)->mesh_vertices[i]);
++        gMesh.insertNode(mv.getNum(), mv.x() * scalingFactor,
++                         mv.y() * scalingFactor, mv.z() * scalingFactor);
++      }
++
++
++  // insert elements
++  if(saveAll)
++    Foam::gInfo << "No physical region defined;"
++        << Foam::endl << "using elementary regions for patch/zone definitions."
++        << Foam::endl;
++  gMesh.setNElems(numElements, !saveAll);
++
++  int num = 0;
++
++  for(viter it = firstVertex(); it != lastVertex(); ++it)
++    writeElementsFOAM(gMesh, (*it)->mesh_vertices, saveAll, num,
++                      (*it)->tag(), (*it)->physicals);
++  for(eiter it = firstEdge(); it != lastEdge(); ++it)
++    writeElementsFOAM(gMesh, (*it)->lines, saveAll, num,
++                      (*it)->tag(), (*it)->physicals);
++  for(fiter it = firstFace(); it != lastFace(); ++it)
++    writeElementsFOAM(gMesh, (*it)->triangles, saveAll, num,
++                      (*it)->tag(), (*it)->physicals);
++  for(fiter it = firstFace(); it != lastFace(); ++it)
++    writeElementsFOAM(gMesh, (*it)->quadrangles, saveAll, num,
++                      (*it)->tag(), (*it)->physicals);
++  for(riter it = firstRegion(); it != lastRegion(); ++it)
++    writeElementsFOAM(gMesh, (*it)->tetrahedra, saveAll, num,
++                      (*it)->tag(), (*it)->physicals);
++  for(riter it = firstRegion(); it != lastRegion(); ++it)
++    writeElementsFOAM(gMesh, (*it)->hexahedra, saveAll, num,
++                      (*it)->tag(), (*it)->physicals);
++  for(riter it = firstRegion(); it != lastRegion(); ++it)
++    writeElementsFOAM(gMesh, (*it)->prisms, saveAll, num,
++                      (*it)->tag(), (*it)->physicals);
++  for(riter it = firstRegion(); it != lastRegion(); ++it)
++    writeElementsFOAM(gMesh, (*it)->pyramids, saveAll, num,
++                      (*it)->tag(), (*it)->physicals);
++
++  gMesh.postInsertElements();
++
++  if(gMesh.cells().size() == 0)
++    {
++      Foam::gSeriousError << "No volumetric mesh is present in "
++                          << name.c_str() << "." << Foam::endl
++                          << "Aborting conversion." << Foam::endl;
++      return 0;
++    }
++
++  Foam::fileName path = Foam::fileName(name).lessExt();
++  if(!createControlDict(path))
++    return 0;
++
++  Foam::Time runTime(Foam::Time::controlDictName, path, ".");
++
++  const Foam::gmshToPolyMeshOptions opt
++      = {5, false, false, renumberMesh, removeUnusedPoints, CTX.verbosity};
++  // conversion with unused point removal turned on
++  Foam::polyMeshConversion* meshPtr = gmshToPolyMesh(gMesh, runTime, opt);
++
++  // write the converted mesh
++  writePolyMeshWithSets(*meshPtr, runTime, opt);
++
++  delete meshPtr;
++  return 1;
++}
++
++#else
++
++#include "Message.h"
++#include "GModel.h"
++
++int GModel::writeFOAM(const std::string &name, const bool renumberMesh,
++                      bool saveAll, const double scalingFactor)
++{
++  Msg(GERROR, "Gmsh has to be compiled with OpenFOAM support to write %s",
++      name.c_str());
++  return 0;
++}
++
++#endif
+--- gmsh-2.0.7/Geo/GModelIO_MED.cpp	2007-02-05 19:00:08.000000000 +0900
++++ gmsh-2.0.7.new/Geo/GModelIO_MED.cpp	2007-04-05 10:16:14.000000000 +0900
+@@ -300,9 +300,9 @@
+        int nbElements = connectivities[typemed].size() / nbNoeudElt;
+        if (nbElements != 0 )
+            med_err CR = MEDelementsEcr (_fid, (char*) _meshName.c_str(),(med_int) 3, 
+-		         &connectivities[typemed][0], MED_FULL_INTERLACE,
++		         (med_int *)&connectivities[typemed][0], MED_FULL_INTERLACE,
+ 			 NULL, MED_FAUX, NULL, MED_FAUX,
+-			 &famElts[typemed][0],nbElements,
++			 (med_int *)&famElts[typemed][0],nbElements,
+ 			   MED_MAILLE,typemed,MED_NOD);
+ 
+     }
+@@ -351,7 +351,7 @@
+ 		              &coordonnees[0], MED_FULL_INTERLACE, MED_CART,
+ 		              nomcoo,unicoo, NULL, MED_FAUX, 
+ 			      &numOpt[0], MED_VRAI, 
+-			      &families[0], nbNoeuds);
++			      (med_int *)&families[0], nbNoeuds);
+     Msg(INFO, "%d ", CR);
+     if ( CR < 0 )
+     {
+--- gmsh-2.0.7/Geo/MEdge.h	2007-03-01 01:59:19.000000000 +0900
++++ gmsh-2.0.7.new/Geo/MEdge.h	2007-04-09 08:35:02.000000000 +0900
+@@ -23,7 +23,11 @@
+ #include <functional>
+ #include "MVertex.h"
+ #include "SVector3.h"
++#if defined(HAVE_FOAM) && defined(cygwin)
++#include "../Common/Hash.h"
++#else
+ #include "Hash.h"
++#endif
+ 
+ // A mesh edge.
+ class MEdge {
+--- gmsh-2.0.7/Geo/MElement.cpp	2007-04-03 18:40:12.000000000 +0900
++++ gmsh-2.0.7.new/Geo/MElement.cpp	2007-04-05 10:16:14.000000000 +0900
+@@ -150,6 +150,30 @@
+   if(physical < 0) revert();
+ }
+ 
++#if defined(HAVE_FOAM)
++void MElement::writeFOAM(int& type, int& partition, int verts[],
++const int physical)
++{
++  type = getTypeForMSH();
++
++  if(!type) return;
++
++  partition = _partition;
++
++  // if necessary, change the ordering of the vertices to get positive
++  // volume
++  setVolumePositive();
++  int n = getNumVertices();
++
++  if(physical < 0) revert();
++
++  for(int i = 0; i < n; i++)
++    verts[i] = getVertex(i)->getNum();
++
++  if(physical < 0) revert();
++}
++#endif // HAVE_FOAM
++
+ void MElement::writePOS(FILE *fp, double scalingFactor, int elementary)
+ {
+   const char *str = getStringForPOS();
+--- gmsh-2.0.7/Geo/MElement.h	2007-04-03 18:40:12.000000000 +0900
++++ gmsh-2.0.7.new/Geo/MElement.h	2007-04-05 10:16:14.000000000 +0900
+@@ -139,6 +139,10 @@
+   // IO routines
+   virtual void writeMSH(FILE *fp, double version=1.0, bool binary=false, 
+ 			int num=0, int elementary=1, int physical=1);
++#if defined(HAVE_FOAM)
++  virtual void writeFOAM(int& type, int& partition, int verts[],
++  const int physical);
++#endif
+   virtual void writePOS(FILE *fp, double scalingFactor=1.0, int elementary=1);
+   virtual void writeSTL(FILE *fp, bool binary=false, double scalingFactor=1.0);
+   virtual void writeVRML(FILE *fp);
+--- gmsh-2.0.7/Geo/MFace.h	2007-03-01 01:59:19.000000000 +0900
++++ gmsh-2.0.7.new/Geo/MFace.h	2007-04-09 08:35:02.000000000 +0900
+@@ -26,7 +26,11 @@
+ #include "SVector3.h"
+ #include "Numeric.h"
+ #include "Context.h"
++#if defined(HAVE_FOAM) && defined(cygwin)
++#include "../Common/Hash.h"
++#else
+ #include "Hash.h"
++#endif
+ 
+ extern Context_T CTX;
+ 
+--- gmsh-2.0.7/Geo/MVertex.cpp	2007-03-20 07:34:12.000000000 +0900
++++ gmsh-2.0.7.new/Geo/MVertex.cpp	2007-04-05 10:16:14.000000000 +0900
+@@ -59,6 +59,15 @@
+   }
+ }
+ 
++#if defined(HAVE_FOAM)
++void MVertex::writeFOAM(int& type, int& partition, int verts[], const int physical)
++{
++    type = 15;
++    partition = 0;
++    verts[0] = _num;
++}
++#endif // HAVE_FOAM
++
+ void MVertex::writeVRML(FILE *fp, double scalingFactor)
+ {
+   fprintf(fp, "%.16g %.16g %.16g,\n",
+--- gmsh-2.0.7/Geo/MVertex.h	2007-02-05 19:00:08.000000000 +0900
++++ gmsh-2.0.7.new/Geo/MVertex.h	2007-04-05 10:16:14.000000000 +0900
+@@ -97,6 +97,9 @@
+   void writeMSH(FILE *fp, bool binary=false, double scalingFactor=1.0);
+   void writeMSH(FILE *fp, double version, bool binary, int num, 
+ 		int elementary, int physical);
++#if defined(HAVE_FOAM)
++  void writeFOAM(int& type, int& partition, int verts[], const int physical);
++#endif
+   void writeVRML(FILE *fp, double scalingFactor=1.0);
+   void writeUNV(FILE *fp, double scalingFactor=1.0);
+   void writeMESH(FILE *fp, double scalingFactor=1.0);
+--- gmsh-2.0.7/Graphics/gl2jpeg.cpp	2007-01-24 19:54:26.000000000 +0900
++++ gmsh-2.0.7.new/Graphics/gl2jpeg.cpp	2007-04-09 08:35:02.000000000 +0900
+@@ -19,6 +19,10 @@
+ // 
+ // Please report all bugs and problems to <gmsh@geuz.org>.
+ 
++#if defined(HAVE_FOAM) && defined(cygwin)
++#define HAVE_BOOLEAN
++#endif
++
+ #include "gl2jpeg.h"
+ #undef EXTERN
+ 
+--- gmsh-2.0.7/Mesh/meshGRegionTransfinite.cpp	2007-03-20 07:34:12.000000000 +0900
++++ gmsh-2.0.7.new/Mesh/meshGRegionTransfinite.cpp	2007-04-09 08:35:02.000000000 +0900
+@@ -162,6 +162,9 @@
+ class GOrientedTransfiniteFace {
+ private:
+   GFace *_gf;
++#ifdef _L
++#undef _L
++#endif
+   int _L, _H;
+   int _permutation, _index;
+   std::vector<MVertex*> _list;
+--- gmsh-2.0.7/Numeric/Numeric.cpp	2007-01-24 19:54:26.000000000 +0900
++++ gmsh-2.0.7.new/Numeric/Numeric.cpp	2007-04-05 10:16:14.000000000 +0900
+@@ -380,6 +380,9 @@
+ 
+ double angle_02pi(double A3)
+ {
++#if defined(HAVE_FOAM) && defined(DP)
++#undef DP
++#endif
+   double DP = 2 * Pi;
+   while(A3 > DP || A3 < 0.) {
+     if(A3 > 0)
+--- gmsh-2.0.7/Parser/CreateFile.cpp	2007-03-20 07:34:12.000000000 +0900
++++ gmsh-2.0.7.new/Parser/CreateFile.cpp	2007-04-09 11:06:43.000000000 +0900
+@@ -64,6 +64,7 @@
+   else if(!strcmp(ext, ".mesh")) return FORMAT_MESH;
+   else if(!strcmp(ext, ".bdf"))  return FORMAT_BDF;
+   else if(!strcmp(ext, ".nas"))  return FORMAT_BDF;
++  else if(!strcmp(ext, ".foam")) return FORMAT_FOAM;
+   else if(!strcmp(ext, ".p3d"))  return FORMAT_P3D;
+   else if(!strcmp(ext, ".wrl"))  return FORMAT_VRML;
+   else if(!strcmp(ext, ".vrml")) return FORMAT_VRML;
+@@ -96,6 +97,7 @@
+   case FORMAT_MED:  strcpy(ext, ".med"); break;
+   case FORMAT_MESH: strcpy(ext, ".mesh"); break;
+   case FORMAT_BDF:  strcpy(ext, ".bdf"); break;
++  case FORMAT_FOAM: strcpy(ext, ".foam"); break;
+   case FORMAT_P3D:  strcpy(ext, ".p3d"); break;
+   case FORMAT_VRML: strcpy(ext, ".wrl"); break;
+   case FORMAT_GIF:  strcpy(ext, ".gif"); break;
+@@ -174,6 +176,12 @@
+ 		     CTX.mesh.save_all, CTX.mesh.scaling_factor);
+     break;
+ 
++  case FORMAT_FOAM:
++    GMODEL->writeFOAM(name, CTX.mesh.foam_remove_unused_points,
++                      CTX.mesh.foam_renumber_mesh, CTX.mesh.save_all,
++                      CTX.mesh.scaling_factor);
++    break;
++
+   case FORMAT_P3D:
+     GMODEL->writeP3D(name, CTX.mesh.save_all, CTX.mesh.scaling_factor);
+     break;
+--- gmsh-2.0.7/Parser/OpenFile.cpp	2007-03-20 07:34:12.000000000 +0900
++++ gmsh-2.0.7.new/Parser/OpenFile.cpp	2007-04-05 10:16:14.000000000 +0900
+@@ -387,6 +387,16 @@
+ 	    !strncmp(header, "$View", 5)) {
+       status = ReadView(name);
+     }
++#if defined(HAVE_FOAM)
++    else if((strlen(name) == 11 && !strncmp(name, "controlDict", 11)) ||
++            (strlen(name) > 11 && (!strncmp(name + strlen(name) - 12,
++                                            "/controlDict", 12) ||
++                                   !strncmp(name + strlen(name) - 12,
++                                            "\\controlDict", 12)))) {
++      Msg(INFO, "Reading a FOAM case %s", name);
++      status = ReadViewFOAM(name);
++    }
++#endif // HAVE_FOAM
+     else {
+       status = GMODEL->readGEO(name);
+     }
+--- gmsh-2.0.7/Plugin/Triangulate.cpp	2007-01-24 19:54:26.000000000 +0900
++++ gmsh-2.0.7.new/Plugin/Triangulate.cpp	2007-04-09 08:35:02.000000000 +0900
+@@ -99,7 +99,11 @@
+ 
+ extern "C"
+ {
++#if defined(HAVE_FOAM) && defined(cygwin)
++#include "../contrib/Triangle/triangle.h"
++#else
+ #include "triangle.h"
++#endif
+ }
+ 
+ static void Project(MVertex *v, double mat[3][3])
+--- gmsh-2.0.7/configure.in	2007-03-31 18:38:03.000000000 +0900
++++ gmsh-2.0.7.new/configure.in	2007-04-09 08:35:02.000000000 +0900
+@@ -69,6 +69,10 @@
+             AC_HELP_STRING([--with-med-prefix=PFX],
+                            [prefix where OpenCascade is installed]),
+             [MED_PREFIX=$withval])
++AC_ARG_WITH(foam-prefix,
++            AC_HELP_STRING([--with-foam-prefix=PFX],
++                           [prefix where include files of libgmshFoam is installed]),
++            [FOAM_PREFIX=$withval])
+ 
+ dnl Parse '--enable' command line options
+ AC_ARG_ENABLE(gsl,
+@@ -125,6 +129,9 @@
+ AC_ARG_ENABLE(med,
+               AC_HELP_STRING([--enable-med],
+                              [enable MED support (default=yes)]))
++AC_ARG_ENABLE(foam,
++              AC_HELP_STRING([--enable-foam],
++                             [enable OpenFOAM support (default=yes)]))
+ 
+ dnl Get the operating system name
+ UNAME=`uname`
+@@ -540,28 +547,6 @@
+   fi
+ fi
+ 
+-dnl Check for CGNS
+-if test "x${CGNS_PREFIX}" != "x"; then
+-  if test "x$enable_cgns" != "xno"; then
+-    enable_cgns="yes"
+-  fi
+-fi
+-if test "x$enable_cgns" = "xyes"; then
+-  if test "x${CGNS_PREFIX}" != "x"; then
+-    LDFLAGS="-L${CGNS_PREFIX}/lib ${LDFLAGS}"
+-  fi
+-  AC_CHECK_LIB(cgns,main,CGNS="yes",CGNS="no")
+-  if test "x${CGNS}" = "xyes"; then
+-    if test "x${CGNS_PREFIX}" = "x"; then
+-      GMSH_LIBS="${GMSH_LIBS} -lcgns"
+-      FLAGS="${FLAGS} -DHAVE_LIBCGNS"
+-    else
+-      GMSH_LIBS="${GMSH_LIBS} -L${CGNS_PREFIX}/lib -lcgns"
+-      FLAGS="${FLAGS} -DHAVE_LIBCGNS -I${CGNS_PREFIX}/include"
+-    fi
+-  fi
+-fi
+-
+ dnl Check for OpenCascade
+ if test "x${OCC_PREFIX}" != "x"; then
+   if test "x$enable_occ" != "xno"; then
+@@ -570,7 +555,7 @@
+ fi
+ if test "x$enable_occ" = "xyes"; then
+   if test "x${OCC_PREFIX}" != "x"; then
+-    LDFLAGS="-L${OCC_PREFIX}/lib ${LDFLAGS}"
++    LDFLAGS="-L${OCC_PREFIX}/lib ${LDFLAGS} -lstdc++"
+   fi
+   AC_CHECK_LIB(TKernel,main,OCC="yes",OCC="no")
+   if test "x${OCC}" = "xyes"; then
+@@ -601,6 +586,7 @@
+     fi
+     AC_CHECK_LIB(hdf5,main,HDF5="yes",HDF5="no")
+     if test "x${HDF5}" = "xyes"; then
++      LIBS="${LIBS} -lhdf5"
+       if test "x${HDF5_PREFIX}" = "x"; then
+         GMSH_LIBS="${GMSH_LIBS} -lhdf5"
+       else
+@@ -611,6 +597,28 @@
+   fi
+ fi
+ 
++dnl Check for CGNS (needs hdf5)
++if test "x${CGNS_PREFIX}" != "x"; then
++  if test "x$enable_cgns" != "xno"; then
++    enable_cgns="yes"
++  fi
++fi
++if test "x$enable_cgns" = "xyes"; then
++  if test "x${CGNS_PREFIX}" != "x"; then
++    LDFLAGS="-L${CGNS_PREFIX}/lib ${LDFLAGS}"
++  fi
++  AC_CHECK_LIB(cgns,main,CGNS="yes",CGNS="no")
++  if test "x${CGNS}" = "xyes"; then
++    if test "x${CGNS_PREFIX}" = "x"; then
++      GMSH_LIBS="${GMSH_LIBS} -lcgns"
++      FLAGS="${FLAGS} -DHAVE_LIBCGNS"
++    else
++      GMSH_LIBS="${GMSH_LIBS} -L${CGNS_PREFIX}/lib -lcgns"
++      FLAGS="${FLAGS} -DHAVE_LIBCGNS -I${CGNS_PREFIX}/include"
++    fi
++  fi
++fi
++
+ dnl Check for MED (needs hdf5)
+ if test "x${HDF5}" = "xyes"; then
+   if test "x$enable_med" != "xno"; then
+@@ -630,6 +638,46 @@
+   fi
+ fi
+ 
++dnl Check for OpenFOAM
++if test "x${FOAM_PREFIX}" != "x"; then
++  if test "x$enable_foam" != "xno"; then
++    enable_foam="yes"
++  fi
++fi
++if test "x$enable_foam" = "xyes"; then
++  if test "x${FOAM_SRC}" = "x"; then
++    echo "********************************************************************"
++    echo "To build Gmsh with OpenFOAM support you need to setup environment"
++    echo "variables by running"
++    echo "~/OpenFOAM/OpenFOAM-(VERSION)/.OpenFOAM-(VERSION)/bashrc."
++    echo "********************************************************************"
++  else
++    LDFLAGS="-L${FOAM_USER_LIBBIN} -L${FOAM_LIBBIN} ${LDFLAGS}"
++    LIBS="${LIBS} -ldynamicMesh -lOpenFOAM -liberty"
++    # Use -lgmshMessageStream to detect the existence of libgmshFoam
++    AC_CHECK_LIB(gmshMessageStream,main,FOAM="yes",FOAM="no")
++    if test "x${FOAM}" = "xyes"; then
++      # Don't add -lgmshMessageStream to the line below - it will crash Gmsh!
++      GMSH_LIBS="${GMSH_LIBS} -L${FOAM_USER_LIBBIN} -lgmshFoam -L${FOAM_LIBBIN} -ldynamicMesh -lfiniteVolume -lOpenFOAM -liberty"
++      FLAGS="${FLAGS} -DHAVE_FOAM -D${WM_ARCH} -D${WM_PRECISION_OPTION} -DNoRepository -I${FOAM_SRC}/meshTools/lnInclude -I${FOAM_SRC}/dynamicMesh/lnInclude -I${FOAM_SRC}/OpenFOAM/lnInclude -I${FOAM_SRC}/finiteVolume/lnInclude"
++      case "$UNAME" in
++        CYGWIN*)
++          LINKER="${LINKER} -mconsole"
++          ;;
++      esac
++      if test "x${FOAM_PREFIX}" != "x"; then
++        FLAGS="${FLAGS} -I${FOAM_PREFIX}/libgmshFoam/lnInclude -I${FOAM_PREFIX}/libgmshMessageStream/lnInclude"
++      fi
++    else
++      echo "********************************************************************"
++      echo "To build Gmsh with OpenFOAM support you need the libgmshFoam"
++      echo "library available at"
++      echo "http://openfoamwiki.net/index.php/Contrib_gmsh2ToFoam."
++      echo "********************************************************************"
++    fi
++  fi
++fi
++
+ dnl Complete zlib link line (zlib must be linked in after libpng and libhdf5)
+ if test "x${ZLIB}" = "xyes"; then
+   dnl If provided by FLTK, use that one; otherwise, look for it
+--- gmsh-2.0.7/doc/gmsh.1	2007-03-31 18:38:08.000000000 +0900
++++ gmsh-2.0.7.new/doc/gmsh.1	2007-04-05 10:16:14.000000000 +0900
+@@ -49,7 +49,7 @@
+ specify mesh output file name.
+ .TP 4
+ .B \-format string
+-set output mesh format (msh, unv, vrml, stl, mesh, bdf, p3d, cgns, med).
++set output mesh format (msh, unv, vrml, stl, mesh, bdf, p3d, cgns, med, foam).
+ .TP 4
+ .B \-algo string
+ select mesh algorithm (iso, netgen, tetgen).
+--- gmsh-2.0.7/doc/texinfo/command_line.texi	2007-03-31 18:38:08.000000000 +0900
++++ gmsh-2.0.7.new/doc/texinfo/command_line.texi	2007-04-05 10:16:14.000000000 +0900
+@@ -19,7 +19,7 @@
+ @item -o file
+ Specify mesh output file name
+ @item -format string
+-Set output mesh format (msh, unv, vrml, stl, mesh, bdf, p3d, cgns, med)
++Set output mesh format (msh, unv, vrml, stl, mesh, bdf, p3d, cgns, med, foam)
+ @item -algo string
+ Select mesh algorithm (iso, netgen, tetgen)
+ @item -smooth int
+--- gmsh-2.0.7/doc/texinfo/opt_mesh.texi	2007-03-20 07:34:14.000000000 +0900
++++ gmsh-2.0.7.new/doc/texinfo/opt_mesh.texi	2007-04-09 11:19:23.000000000 +0900
+@@ -109,6 +109,16 @@
+ Default value: @code{1}@*
+ Saved in: @code{General.OptionsFileName}
+ 
++@item Mesh.FoamRemoveUnusedPoints
++Remove unused points (the centers of circular arcs etc.) from OpenFOAM mesh?@*
++Default value: @code{1}@*
++Saved in: @code{General.OptionsFileName}
++
++@item Mesh.FoamRenumberMesh
++Renumber OpenFOAM mesh for matrix bandwidth compression?@*
++Default value: @code{1}@*
++Saved in: @code{General.OptionsFileName}
++
+ @item Mesh.Format
+ Mesh output format (1=msh, 2=unv, 19=vrml, 27=stl, 30=mesh, 31=bdf, 32=cgns, 33=med)@*
+ Default value: @code{1}@*
+--- gmsh-2.0.7/Geo/Makefile	2007-03-02 21:43:09.000000000 +0900
++++ gmsh-2.0.7.new/Geo/Makefile	2007-04-05 10:16:14.000000000 +0900
+@@ -38,6 +38,7 @@
+         GModelIO_OCC.cpp\
+         GModelIO_CGNS.cpp\
+         GModelIO_MED.cpp\
++	GModelIO_FOAM.cpp\
+       ExtrudeParams.cpp \
+       Geo.cpp \
+ 	GeoStringInterface.cpp GeoInterpolation.cpp\

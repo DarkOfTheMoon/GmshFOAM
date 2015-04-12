@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -x
+
+wmake libso libgmshMessageStream && \
+wmake libso libgmshFoam && \
+wmake gmsh2ToFoam && \
+wmake foamToGmsh && \
+wmake gmshFoamMonitor && \
+cp gmshFoam ${FOAM_USER_APPBIN}

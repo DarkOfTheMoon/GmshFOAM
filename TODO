@@ -1,0 +1,24 @@
+[To-do list]
+
+Preprocessing: 
+
+  * Adding to the gmshMesh class a capability of converting a polyMesh
+  back to a Gmsh mesh, and reading the converted mesh from Gmsh again
+
+  * polyMeshConversion -> fvMesh constructor
+
+  * Specifying the destination time directory for writing mesh
+
+Postprocessing:
+
+  * Support for pointFields
+
+  * Selection of fields to be read in
+
+  * Extracting fields within a given timestep range (or a single timestep)
+    -> only the startTime can be specified now
+
+  * volVectorField -> cell-center pointVectorField conversion (for
+    data size reduction)
+
+  * Polyhedra decomposer

@@ -1,0 +1,9 @@
+EXE_INC = \
+    -I../libgmshFoam/lnInclude \
+    -I../libgmshMessageStream/lnInclude \
+
+EXE_LIBS = \
+    -ldynamicMesh \
+    -L$(FOAM_USER_LIBBIN) \
+    -lgmshFoam \
+    -lgmshMessageStream
