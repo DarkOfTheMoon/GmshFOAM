@@ -31,11 +31,7 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "polyMesh.H"
-#ifdef cygwin
-#include "Time.hh"
-#else
 #include "Time.H"
-#endif
 #include "primitiveMesh.H"
 #include "DynamicList.H"
 

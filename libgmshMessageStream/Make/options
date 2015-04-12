@@ -1,8 +1,0 @@
-EXE_INC = 
-
-#ifdef cygwin
-LIB_LIBS = \
-    -lOpenFOAM
-#else
-LIB_LIBS =
-#endif

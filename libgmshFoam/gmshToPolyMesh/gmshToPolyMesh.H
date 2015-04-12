@@ -31,12 +31,7 @@ SourceFiles
 #ifndef gmshToPolyMesh_H
 #define gmshToPolyMesh_H
 
-#ifdef cygwin
-#include "Time.hh"
-#else
 #include "Time.H"
-#endif
-
 #include "gmshMesh.H"
 #include "polyMeshConversion.H"
 

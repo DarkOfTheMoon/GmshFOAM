@@ -47,11 +47,7 @@ Description
 
 #include "gmshFoamConfig.H"
 
-#ifdef cygwin
-#include "Time.hh"
-#else
 #include "Time.H"
-#endif
 #include "argList.H"
 
 #include "gmshToPolyMesh.H"

@@ -35,11 +35,7 @@ SourceFiles
 #define gmshNodes_H
 
 #include "IFstream.H"
-#ifdef cygwin
-#include "Map.hh"
-#else
 #include "Map.H"
-#endif
 #include "pointField.H"
 
 namespace Foam

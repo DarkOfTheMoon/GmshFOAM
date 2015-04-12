@@ -27,12 +27,7 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"
-#ifdef cygwin
-#include "Time.hh"
-#else
 #include "Time.H"
-#endif
-
 #include "GmshClient.h"
 
 using namespace Foam;

@@ -37,11 +37,7 @@ SourceFiles
 
 #include "gmshFoamConfig.H"
 
-#ifdef cygwin
-#include "Time.hh"
-#else
 #include "Time.H"
-#endif
 #include "fvMesh.H"
 
 namespace Foam

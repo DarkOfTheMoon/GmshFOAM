@@ -8,17 +8,7 @@ EXE_INC = \
     -DWM_PROJECT_VERSION_MINOR=`echo $(WM_PROJECT_VERSION) | awk 'BEGIN{FS="."}{print $$2;}'` \
     -DWM_PROJECT_VERSION_PATCH=`echo $(WM_PROJECT_VERSION) | awk 'BEGIN{FS="."}{if (length($$3) > 0) print $$3; else print "0";}'`
 
-#ifdef cygwin
-LIB_LIBS = \
-    -lfiniteVolume \
-    -ldynamicMesh \
-    -lmeshTools \
-    -lOpenFOAM \
-    -L$(FOAM_USER_LIBBIN) \
-    -lgmshMessageStream
-#else
 LIB_LIBS = \
     -lfiniteVolume \
     -ldynamicMesh \
     -lmeshTools
-#endif
