@@ -88,7 +88,7 @@ const label verbosity)
 
     const string cmdLine = "gmsh -3 '" + geoName + "'";
 
-    gInfo(verbosity >= 2) << "A file name with a .geo extention is given;"
+    Info << "A file name with a .geo extention is given;"
         << endl << "running Gmsh with " << cmdLine << ":" << endl;
 
     int status = system(cmdLine.c_str());
@@ -100,7 +100,7 @@ const label verbosity)
                 << status << exit(FatalError);
     }
 
-    gInfo(verbosity >= 2) << "    ... running Gmsh done." << endl;
+    Info << "    ... running Gmsh done." << endl;
 }
 
 polyMeshConversion* convertedPolyMesh(const fileName& mshName,
@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
     #include "setRootCase.H"
     #include "createTime.H"
 
-    gInfo << endl;
+    Info << endl;
 
     gmshToPolyMeshOptions opt;
     opt.nOptions_ = 5;
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
         runGmsh(mshName, args, opt.verbosity_);
 
         mshName = mshName.lessExt() + ".msh";
-        gInfo(opt.verbosity_ >= 2) << endl << "Converting " << mshName << endl
+        Info << endl << "Converting " << mshName << endl
             << endl;
     }
 
@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
 
     delete meshPtr;
 
-    gInfo(opt.verbosity_ >= 1) << endl << "End\n" << endl;
+    Info << endl << "End\n" << endl;
 
     return 0;
 }

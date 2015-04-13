@@ -286,7 +286,7 @@ void polyMeshToGmsh::writeGmshMesh()
         ).c_str()
     );
 
-    gInfo(verbosity_ >= 3) << "Writing Header" << endl;
+    Info << "Writing Header" << endl;
 
     // write mesh format information
     gmshMeshFile << "$MeshFormat" << std::endl

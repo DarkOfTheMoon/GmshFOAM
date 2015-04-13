@@ -94,18 +94,18 @@ const fileName& caseName, const gmshViewsOptions& opt)
     }
 
     // print the fields found
-    gInfo(verbosity_ >= 3) << endl << "Found supported objects at time = "
+    Info << endl << "Found supported objects at time = "
         << timeList_[startTime_].name() << ":" << endl;
     forAll(fieldNames_, classI)
     {
         if(fieldNames_[classI].size() || verbosity_ >= 4)
         {
-            gInfo(verbosity_ >= 3) << "    " << fieldClasses_[classI] << ": ";
+            Info << "    " << fieldClasses_[classI] << ": ";
             forAll(fieldNames_[classI], fieldI)
             {
-                gInfo(verbosity_ >= 3) << fieldNames_[classI][fieldI] << " ";
+                Info << fieldNames_[classI][fieldI] << " ";
             }
-            gInfo(verbosity_ >= 3) << endl;
+            Info << endl;
         }
     }
 
@@ -127,13 +127,13 @@ const fileName& caseName, const gmshViewsOptions& opt)
             if(splitTimeStepsByMeshMotion_)
             {
                 meshTime_.append(timeI);
-                gInfo(verbosity_ >= 3) << "    Found mesh motion at t = "
+                Info << "    Found mesh motion at t = "
                     << timeList_[timeI].name() << endl;
             }
             else
             {
                 isMeshMotion_ = true;
-                gInfo(verbosity_ >= 3) << endl << "Detected mesh motion at t = "
+                Info << endl << "Detected mesh motion at t = "
                     << timeList_[timeI].name()
                     << ". Constructing mesh motion fields." << endl;
                 break;
@@ -145,7 +145,7 @@ const fileName& caseName, const gmshViewsOptions& opt)
     endTime_ = meshTime_[1] - 1;
     nTimeSteps_ = endTime_ - startTime_ + 1;
 
-    gInfo(verbosity_ >= 3) << "    nTimeSteps = " << nTimeSteps_ << endl;
+    Info << "    nTimeSteps = " << nTimeSteps_ << endl;
 
     // construct the element lists
     makeFaceLists();
@@ -427,7 +427,7 @@ gmshViewBase *gmshViews::getNextView()
 
                     if(ioPoints.headerOk())
                     {
-                        gInfo(verbosity_ >= 3) << endl
+                        Info << endl
                             << "Applying mesh movement at t = "
                             << timeList_[startTime_].name() << endl;
 

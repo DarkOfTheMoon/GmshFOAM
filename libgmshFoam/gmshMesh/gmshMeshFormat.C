@@ -48,7 +48,7 @@ void gmshMeshFormat::readMeshFormat(IFstream& inFile, const word& execName)
                 << exit(FatalError);
     }
 
-    gInfo(verbosity_ >= 3) << "File format version: " << formatVersion_
+    Info << "File format version: " << formatVersion_
         << endl;
 
     word tag(inFile);

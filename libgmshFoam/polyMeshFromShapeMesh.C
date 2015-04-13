@@ -174,7 +174,7 @@ polyMesh::polyMesh
 {
     if (debug)
     {
-        gInfo <<"Constructing polyMesh from cell and boundary shapes." << endl;
+        Info <<"Constructing polyMesh from cell and boundary shapes." << endl;
     }
 
     // Remove all of the old mesh files if they exist

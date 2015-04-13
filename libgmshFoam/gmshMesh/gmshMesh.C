@@ -143,7 +143,7 @@ const cellShape& shape) const
 
 void gmshMesh::doAutoInvert()
 {
-    gInfo(verbosity_ >= 1)
+    Info
         << endl << "Automatically inverting cells with wrong orientation"
             << (verbosity_ >= 4 ? ":" : "") << endl;
 
@@ -200,7 +200,7 @@ void gmshMesh::doAutoInvert()
 
 void gmshMesh::doUnusedPointRemoval()
 {
-    gInfo(verbosity_ >= 1) << endl << "Removing unused points"
+    Info << endl << "Removing unused points"
         << (verbosity_ >= 4 ? ":" : "") << endl;
 
     boolList usedPoints(points().size(), false);
@@ -264,7 +264,7 @@ void gmshMesh::doUnusedPointRemoval()
             nRemovedPoints++;
             if(verbosity_ >= 5 && (nRemovedPoints % 100) == 0)
             {
-                gInfo << "    Removed " << nRemovedPoints << " points" << endl;
+                Info << "    Removed " << nRemovedPoints << " points" << endl;
             }
 	}
     }
@@ -347,24 +347,24 @@ wordList& boundaryPatchTypes, wordList& cellZoneNames)
                 }
             }
 
-        gInfo << nl << "Tentative patches/FaceZones:" << nl
+        Info << nl << "Tentative patches/FaceZones:" << nl
             << "Patch\tSize\tName";
         for(label i = 0; i < maxLen - 4; i++)
         {
-            gInfo << ' ';
+            Info << ' ';
         }
-        gInfo << "\tBase type" << endl;
+        Info << "\tBase type" << endl;
 
         forAll(patchFaces(), patchI)
         {
             label len = boundaryPatchNames[patchI].length();
-            gInfo << "    " << patchI << '\t' << patchFaces()[patchI].size()
+            Info << "    " << patchI << '\t' << patchFaces()[patchI].size()
                 << '\t' << boundaryPatchNames[patchI];
             for(label i = 0; i < maxLen - len; i++)
             {
-                gInfo << ' ';
+                Info << ' ';
             }
-            gInfo << '\t' << boundaryPatchTypes[patchI] << endl;
+            Info << '\t' << boundaryPatchTypes[patchI] << endl;
         }
     }
 

@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     "verbosity (0-5; defaults to 3)");
 
 #   include "setRootCase.H"
-    gInfo << endl;
+    Info << endl;
 #   include "createTime.H"
 #   include "createMesh.H"
 
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     const fileName gmshViewsFolder = args.rootPath()/args.caseName()/"Gmsh";
     if(isDir(gmshViewsFolder))
     {
-        gInfo(opt.verbosity_ >= 3) << endl << "Removing old Gmsh files in "
+        Info << endl << "Removing old Gmsh files in "
             << gmshViewsFolder << endl;
         rmDir(gmshViewsFolder);
     }
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
     // do conversion
     views.convert(gmshViewsFolder);
 
-    gInfo(opt.verbosity_ >= 1) << endl << "End\n" << endl;
+    Info << endl << "End\n" << endl;
 
     return 0;
 }

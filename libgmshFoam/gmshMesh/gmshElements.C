@@ -166,7 +166,7 @@ const label vertices[])
     {
         isPhysicalRegion_ = true;
 
-        gInfo(verbosity_ >= 3)
+        Info
             << "Found a physical region of region number other than 0; "
             << endl << "omitting elementary region handling." << endl;
 
@@ -291,16 +291,16 @@ void gmshElements::postInsertElements()
     {
         if(verbosity_ >= 5 || (verbosity_ >= 4 && nCells_[typeI] > 0))
         {
-            gInfo << "    " << elemTab_[typeI].name_ << ": " << nCells_[typeI];
+            Info << "    " << elemTab_[typeI].name_ << ": " << nCells_[typeI];
             if(!elemTab_[typeI].isHandled_)
             {
-                gInfo << " (not converted to OpenFOAM mesh)";
+                Info << " (not converted to OpenFOAM mesh)";
             }
             else if(elemTab_[typeI].cellModel_ == NULL)
             {
-                gInfo << " (not counted as cells)";
+                Info << " (not counted as cells)";
             }
-            gInfo << endl;
+            Info << endl;
         }
     }
 }
@@ -312,7 +312,7 @@ const bool isPhysicalNames, const scalar formatVersion, const word& execName)
     label nElems;
     inFile >> nElems;
 
-    gInfo(verbosity_ >= 3) << endl << "Read nElems: " << nElems << endl;
+    Info << endl << "Read nElems: " << nElems << endl;
 
     setNElems(nElems, isPhysicalNames);
 

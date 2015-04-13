@@ -61,7 +61,7 @@ const word& execName)
     label nVerts;
     inFile >> nVerts;
 
-    gInfo(verbosity_ >= 3) << endl << "Read nVerts: " << nVerts << endl;
+    Info << endl << "Read nVerts: " << nVerts << endl;
 
     setNVerts(nVerts);
 

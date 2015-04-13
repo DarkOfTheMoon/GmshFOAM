@@ -56,7 +56,7 @@ const gmshToPolyMeshOptions& opt)
         gmsh.doUnusedPointRemoval();
     }
 
-    gInfo(opt.verbosity_ >= 3) << endl << "Constructing polyMesh" << endl;
+    Info << endl << "Constructing polyMesh" << endl;
 
     // Problem is that the orientation of the patchFaces does not have to
     // be consistent with the outwards orientation of the mesh faces. So
@@ -121,11 +121,11 @@ const gmshToPolyMeshOptions& opt)
 
     if(opt.checkMesh_)
     {
-        gInfo(opt.verbosity_ >= 1) << endl
+        Info << endl
             << "Performing a simplified checkMesh test"
             << (opt.verbosity_ >= 3 ? ":" : "") << endl;
         newMeshPtr->checkMesh(opt.verbosity_ >= 4);
-        gInfo(opt.verbosity_ >= 3) << "    ... checkMesh done." << endl;
+        Info << "    ... checkMesh done." << endl;
     }
 
     newMeshPtr->printPatchZoneToStr(opt.verbosity_);
@@ -136,7 +136,7 @@ const gmshToPolyMeshOptions& opt)
 bool writePolyMeshWithSets(const polyMeshConversion& mesh, Time& runTime,
 const gmshToPolyMeshOptions& opt)
 {
-    gInfo(opt.verbosity_ >= 3) << endl
+    Info << endl
         << "Writing the final converted mesh and sets:" << endl;
 
     //Get polyMesh to write to constant
@@ -174,7 +174,7 @@ const gmshToPolyMeshOptions& opt)
         return false;
     }
 
-    gInfo(opt.verbosity_ >= 3) << "    ... done." << endl;
+    Info << "    ... done." << endl;
     return true;
 }
 

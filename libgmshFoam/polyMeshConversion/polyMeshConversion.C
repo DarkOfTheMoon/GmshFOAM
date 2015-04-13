@@ -484,11 +484,11 @@ const List<DynamicList<face> >& patchFaces, const label verbosity)
     gInfo(verbosity >= 4) << "    ... defined " << nPatchFaces
         << " patch faces and " << nZoneFaces << " faceZone faces." << endl;
 
-    gInfo(verbosity >= 3) << endl << "Performing repatching:" << endl;
+    Info << endl << "Performing repatching:" << endl;
 
     repatcher.repatch();
 
-    gInfo(verbosity >= 3) << "    ... repatching done." << endl;
+    Info << "    ... repatching done." << endl;
 
     forAll(zoneFaces, zoneI)
     {
@@ -509,36 +509,36 @@ void polyMeshConversion::printPatchZoneToStr(const label verbosity) const
         }
     }
 
-    gInfo(verbosity >= 3) << nl << "Patches:" << nl << "Patch\tSize\tName";
+    Info << nl << "Patches:" << nl << "Patch\tSize\tName";
 
     for(label i = 0; i < maxLen - 4; i++)
     {
-        gInfo << ' ';
+        Info << ' ';
     }
-    gInfo(verbosity >= 3) << "\tBase type" << endl;
+    Info << "\tBase type" << endl;
 
     forAll(boundaryMesh(), patchI)
     {
         label len = boundaryMesh()[patchI].name().length();
-        gInfo(verbosity >= 3) << "    " << patchI << '\t'
+        Info << "    " << patchI << '\t'
             << boundaryMesh()[patchI].size() << '\t'
             << boundaryMesh()[patchI].name();
         for(label i = 0; i < maxLen - len; i++)
         {
-            gInfo(verbosity >= 3) << ' ';
+            Info << ' ';
         }
-        gInfo(verbosity >= 3) << '\t' << boundaryMesh()[patchI].type() << endl;
+        Info << '\t' << boundaryMesh()[patchI].type() << endl;
     }
 
     // Print the finally determined cellZones
     if (cellZones().size())
     {
-        gInfo(verbosity >= 3) << nl << "CellZones:" << nl << "Zone\tSize\tName"
+        Info << nl << "CellZones:" << nl << "Zone\tSize\tName"
             << endl;
 
         forAll(cellZones(), zoneI)
         {
-            gInfo(verbosity >= 3) << "    " << zoneI << '\t'
+            Info << "    " << zoneI << '\t'
                 << cellZones()[zoneI].size() << '\t'
                 << cellZones()[zoneI].name() << endl;
         }
@@ -547,12 +547,12 @@ void polyMeshConversion::printPatchZoneToStr(const label verbosity) const
     // Print the finally determined faceZones
     if (faceZones().size())
     {
-        gInfo(verbosity >= 3) << nl << "FaceZones:" << nl << "Zone\tSize\tName"
+        Info << nl << "FaceZones:" << nl << "Zone\tSize\tName"
             << endl;
 
         forAll(faceZones(), zoneI)
         {
-            gInfo(verbosity >= 3) << "    " << zoneI << '\t'
+            Info << "    " << zoneI << '\t'
                 << faceZones()[zoneI].size() << '\t'
                 << faceZones()[zoneI].name() << endl;
         }
@@ -699,11 +699,11 @@ polyMeshConversion *polyMeshConversion::bandCompressedMesh(
         }
     }
 
-    gInfo(verbosity >= 1) << endl
+    Info << endl
         << "Performing renumberMesh matrix bandwidth compression";
-    gInfo(verbosity >= 3) << ":" << endl <<
+    Info << ":" << endl <<
         "    Band before renumbering: " << band;
-    gInfo(verbosity >= 1) << endl;
+    Info << endl;
 
     // create a new mesh
     polyMeshConversion* newMeshPtr = renumberedMesh(verbosity);
@@ -725,7 +725,7 @@ polyMeshConversion *polyMeshConversion::bandCompressedMesh(
         }
     }
 
-    gInfo(verbosity >= 3) << "    Band after renumbering: " << band << endl;
+    Info << "    Band after renumbering: " << band << endl;
 
     return newMeshPtr;
 }

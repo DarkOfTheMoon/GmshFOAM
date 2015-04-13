@@ -69,7 +69,7 @@ const gmshViewHeader& vH, const char* tB, const gmshViewBuffer &vB) const
     std::ofstream vFile(name.c_str(), std::ios::binary);
     OStringStream oStr;
 
-    gInfo(verbosity_ >= 3) << "    Writing view" << endl;
+    Info << "    Writing view" << endl;
     gInfo(verbosity_ >= 4) << "        Writing header" << endl;
 
     // write header
