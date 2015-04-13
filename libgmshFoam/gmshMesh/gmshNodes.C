@@ -61,7 +61,7 @@ const word& execName)
     label nVerts;
     inFile >> nVerts;
 
-    Info << endl << "Read nVerts: " << nVerts << endl;
+    Info << nl << "Read nVerts: " << nVerts << endl;
 
     setNVerts(nVerts);
 

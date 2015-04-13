@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     const fileName gmshViewsFolder = args.rootPath()/args.caseName()/"Gmsh";
     if(isDir(gmshViewsFolder))
     {
-        Info << endl << "Removing old Gmsh files in "
+        Info << nl << "Removing old Gmsh files in "
             << gmshViewsFolder << endl;
         rmDir(gmshViewsFolder);
     }
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
     // do conversion
     views.convert(gmshViewsFolder);
 
-    Info << endl << "End\n" << endl;
+    Info << nl << "End\n" << endl;
 
     return 0;
 }

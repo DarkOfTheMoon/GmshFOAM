@@ -168,7 +168,7 @@ const label vertices[])
 
         Info
             << "Found a physical region of region number other than 0; "
-            << endl << "omitting elementary region handling." << endl;
+            << nl << "omitting elementary region handling." << endl;
 
         elementaryRegionToPatch_.clear();
         elementaryRegionToZone_.clear();
@@ -285,7 +285,7 @@ void gmshElements::postInsertElements()
         zoneCells_[zoneI].shrink();
     }
 
-    gInfo(verbosity_ >= 4) << endl << "Cells:" << endl << "      total: "
+    gInfo(verbosity_ >= 4) << nl << "Cells:" << nl << "      total: "
         << cells_.size() << endl;
     for(label typeI = 1; typeI <= 19; typeI++)
     {
@@ -312,11 +312,11 @@ const bool isPhysicalNames, const scalar formatVersion, const word& execName)
     label nElems;
     inFile >> nElems;
 
-    Info << endl << "Read nElems: " << nElems << endl;
+    Info << nl << "Read nElems: " << nElems << endl;
 
     setNElems(nElems, isPhysicalNames);
 
-    gInfo(verbosity_ >= 4) << endl
+    gInfo(verbosity_ >= 4) << nl
         << "Reading elements and mapping Gmsh regions to Foam patches/zones"
         << (verbosity_ >= 5 ? ":" : "") << endl;
 
@@ -385,7 +385,7 @@ const bool isPhysicalNames, const scalar formatVersion, const word& execName)
 
     gInfo(!isPhysicalRegion_ && verbosity_ >= 3)
         << "Physical region of region number other than 0 not found;"
-            << endl << "using elementary region(s) instead." << endl;
+            << nl << "using elementary region(s) instead." << endl;
 
     postInsertElements();
 

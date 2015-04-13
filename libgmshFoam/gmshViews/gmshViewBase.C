@@ -73,8 +73,8 @@ const gmshViewHeader& vH, const char* tB, const gmshViewBuffer &vB) const
     gInfo(verbosity_ >= 4) << "        Writing header" << endl;
 
     // write header
-    oStr << "$PostFormat" << endl
-        << pF.version << " " << pF.format << " " <<  pF.size << endl
+    oStr << "$PostFormat" << nl
+        << pF.version << " " << pF.format << " " <<  pF.size << nl
         << "$EndPostFormat" << endl;
 
     oStr << "$View" << endl;

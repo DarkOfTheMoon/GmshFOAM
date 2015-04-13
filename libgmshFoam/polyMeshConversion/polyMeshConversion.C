@@ -192,7 +192,7 @@ polyMeshConversion* polyMeshConversion::renumberedMesh(const label verbosity)
             else
             {
                 gWarning(verbosity >= 1)
-                    << "Error in internal face insertion; " << endl
+                    << "Error in internal face insertion; " << nl
                     << "    falling back to the mesh without matrix bandwidth"
                     << " compression" << endl;
                 return static_cast<polyMeshConversion*>(NULL);
@@ -417,7 +417,7 @@ const List<DynamicList<face> >& patchFaces, const label verbosity)
 
     zoneFaces.setSize(patchFaces.size());
 
-    gInfo(verbosity >= 4) << endl
+    gInfo(verbosity >= 4) << nl
         << "Finding corresponding patch faces for the " << pp.size()
         << " undefined faces:" << endl;
 
@@ -484,7 +484,7 @@ const List<DynamicList<face> >& patchFaces, const label verbosity)
     gInfo(verbosity >= 4) << "    ... defined " << nPatchFaces
         << " patch faces and " << nZoneFaces << " faceZone faces." << endl;
 
-    Info << endl << "Performing repatching:" << endl;
+    Info << nl << "Performing repatching:" << endl;
 
     repatcher.repatch();
 
@@ -561,7 +561,7 @@ void polyMeshConversion::printPatchZoneToStr(const label verbosity) const
 
 void polyMeshConversion::removeEmptyPatches(const label verbosity)
 {
-    gInfo(verbosity >= 4) << endl
+    gInfo(verbosity >= 4) << nl
         << "Removing zero-sized surface patches from polyMesh/boundary"
         << (verbosity >= 5 ? ":" : "") << endl;
 
@@ -699,9 +699,9 @@ polyMeshConversion *polyMeshConversion::bandCompressedMesh(
         }
     }
 
-    Info << endl
+    Info << nl
         << "Performing renumberMesh matrix bandwidth compression";
-    Info << ":" << endl <<
+    Info << ":" << nl <<
         "    Band before renumbering: " << band;
     Info << endl;
 

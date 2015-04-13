@@ -94,7 +94,7 @@ const fileName& caseName, const gmshViewsOptions& opt)
     }
 
     // print the fields found
-    Info << endl << "Found supported objects at time = "
+    Info << nl << "Found supported objects at time = "
         << timeList_[startTime_].name() << ":" << endl;
     forAll(fieldNames_, classI)
     {
@@ -109,7 +109,7 @@ const fileName& caseName, const gmshViewsOptions& opt)
         }
     }
 
-    gInfo(splitTimeStepsByMeshMotion_ && verbosity_ >= 3) << endl
+    gInfo(splitTimeStepsByMeshMotion_ && verbosity_ >= 3) << nl
         << "Splitting field views by mesh motion:" << endl;
 
     // detect mesh motions
@@ -133,7 +133,7 @@ const fileName& caseName, const gmshViewsOptions& opt)
             else
             {
                 isMeshMotion_ = true;
-                Info << endl << "Detected mesh motion at t = "
+                Info << nl << "Detected mesh motion at t = "
                     << timeList_[timeI].name()
                     << ". Constructing mesh motion fields." << endl;
                 break;
@@ -427,7 +427,7 @@ gmshViewBase *gmshViews::getNextView()
 
                     if(ioPoints.headerOk())
                     {
-                        Info << endl
+                        Info << nl
                             << "Applying mesh movement at t = "
                             << timeList_[startTime_].name() << endl;
 

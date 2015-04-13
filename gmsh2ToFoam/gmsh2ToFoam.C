@@ -89,7 +89,7 @@ const label verbosity)
     const string cmdLine = "gmsh -3 '" + geoName + "'";
 
     Info << "A file name with a .geo extention is given;"
-        << endl << "running Gmsh with " << cmdLine << ":" << endl;
+        << nl << "running Gmsh with " << cmdLine << ":" << endl;
 
     int status = system(cmdLine.c_str());
 
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
         runGmsh(mshName, args, opt.verbosity_);
 
         mshName = mshName.lessExt() + ".msh";
-        Info << endl << "Converting " << mshName << endl
+        Info << nl << "Converting " << mshName << nl
             << endl;
     }
 
@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
 
     delete meshPtr;
 
-    Info << endl << "End\n" << endl;
+    Info << nl << "End\n" << endl;
 
     return 0;
 }

@@ -61,7 +61,7 @@ gmshViewVolMesh<T1, T2>
 const fvMesh& mesh, const label verbosity)
     : gmshViewBase(views, fieldName, runTime, verbosity), mesh_(mesh)
 {
-    Info << endl << "Reading " << fieldName << endl;
+    Info << nl << "Reading " << fieldName << endl;
 }
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //

@@ -55,7 +55,7 @@ const char* physicalName)
 void gmshPhysicalNames::readPhysicalNames(IFstream& inFile,
 const word& execName)
 {
-    Info << endl
+    Info << nl
         << "Found string labels for physical regions." << endl;
 
     label nPhysicalNames;

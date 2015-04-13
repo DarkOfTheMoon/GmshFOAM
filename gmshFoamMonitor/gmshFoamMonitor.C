@@ -88,7 +88,7 @@ GmshClient& client, const label interval)
     client.Info(infoStr.str().c_str());
 
     OStringStream initializeStr;
-    initializeStr << "View.ShowTime=2;" << endl
+    initializeStr << "View.ShowTime=2;" << nl
         << "PostProcessing.FoamStartTime=\"latestTime\";" << endl;
 
     string initialOptionStr;
@@ -124,10 +124,10 @@ GmshClient& client, const label interval)
             // settings, delete the views and read the newest time
             // directory
             OStringStream mergeStr;
-            mergeStr << "nViews = PostProcessing.NbViews;" << endl
-                << "For viewI In {0:PostProcessing.NbViews-1}" << endl
-                << "isVisible[viewI] = View[0].Visible;" << endl
-                << "Delete View[0];" << endl
+            mergeStr << "nViews = PostProcessing.NbViews;" << nl
+                << "For viewI In {0:PostProcessing.NbViews-1}" << nl
+                << "isVisible[viewI] = View[0].Visible;" << nl
+                << "Delete View[0];" << nl
                 << "EndFor" << endl;
             mergeStr << "Merge \"" << casePath.c_str()
                 << "/system/controlDict\";" << endl;
@@ -146,8 +146,8 @@ GmshClient& client, const label interval)
                 // viewOptions are not present
                 mergeStr << "nViews = (nViews > PostProcessing.NbViews"
                     " ? PostProcessing.NbViews : nViews);"
-                    << "For viewI In {0:nViews-1}" << endl
-                    << "View[viewI].Visible = isVisible[viewI];" << endl
+                    << "For viewI In {0:nViews-1}" << nl
+                    << "View[viewI].Visible = isVisible[viewI];" << nl
                     << "EndFor" << endl;
             }
 
