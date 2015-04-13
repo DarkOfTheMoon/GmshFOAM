@@ -45,8 +45,6 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#include "gmshFoamConfig.H"
-
 #include "Time.H"
 #include "argList.H"
 
@@ -125,19 +123,12 @@ int main(int argc, char *argv[])
     argList::validOptions.insert("noCheckMesh", "");
     argList::validOptions.insert("noRenumberMesh", "");
     argList::validOptions.insert("noUnusedPointRemoval", "");
-    argList::validOptions.insert("verbosity",
-    "verbosity (0-5; defaults to 3)");
+    argList::validOptions.insert("verbosity", "verbosity (0-5; defaults to 3)");
 
-#include "setRootCase.H"
+    #include "setRootCase.H"
+    #include "createTime.H"
 
     gInfo << endl;
-
-#if WITH_NOREAD_TIME_CTOR
-    // with this Time object mesh can be written without system/ subdirectory
-    Time runTime(args.rootPath(), args.caseName());
-#else
-#   include "createTime.H"
-#endif
 
     gmshToPolyMeshOptions opt;
     opt.nOptions_ = 5;

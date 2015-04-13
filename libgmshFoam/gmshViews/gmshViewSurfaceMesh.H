@@ -34,13 +34,7 @@ SourceFiles
 #ifndef gmshViewSurfaceMesh_H
 #define gmshViewSurfaceMesh_H
 
-#include "gmshFoamConfig.H"
-
 #include "gmshViewBase.H"
-
-#if !WITH_FVSPATCHFIELD
-#define fvsPatchField fvPatchField
-#endif
 
 namespace Foam
 {

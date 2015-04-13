@@ -35,8 +35,6 @@ SourceFiles
 #ifndef gmshViewBase_H
 #define gmshViewBase_H
 
-#include "gmshFoamConfig.H"
-
 #include "Time.H"
 #include "fvMesh.H"
 
@@ -107,14 +105,12 @@ protected:
     inline const scalar& component(const tensor& t, const label componentI)
         const { return t[componentI]; }
 
-#if WITH_SYMMTENSOR
     inline const scalar& component(const symmTensor& t, const label componentI)
         const
     {
         static label tab[] = {0, 1, 2, 1, 3, 4, 2, 4, 5};
         return t[tab[componentI]];
     }
-#endif
 
 public:
     // Constructor

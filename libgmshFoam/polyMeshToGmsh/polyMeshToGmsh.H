@@ -70,10 +70,10 @@ class polyMeshToGmsh
 
 public:
 
-    // Constructor
+    //- Constructor
     polyMeshToGmsh(const IOobject& io, const label verbosity);
 
-    // Destructor
+    //- Destructor
     ~polyMeshToGmsh() { totalPhysicals_ += physicalNameI_; }
 
     label getNNames();

@@ -25,14 +25,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#include "gmshFoamConfig.H"
-
 #include "surfaceFields.H"
-#if WITH_FVSPATCHFIELD
 #include "fvsPatchField.H"
-#else
-#include "fvPatchField.H"
-#endif
 
 #include "gmshMessageStream.H"
 #include "gmshViewSurfaceMesh.H"
@@ -319,10 +313,8 @@ void gmshViewSurfaceMesh<T1, T2>
 template class gmshViewSurfaceMesh<double, scalar>;
 // double precision Gmsh view / surfaceVectorField
 template class gmshViewSurfaceMesh<double, vector>;
-#if WITH_SYMMTENSOR
 // double precision Gmsh view / surfaceSymmTensorField
 template class gmshViewSurfaceMesh<double, symmTensor>;
-#endif
 // double precision Gmsh view / surfaceTensorField
 template class gmshViewSurfaceMesh<double, tensor>;
 

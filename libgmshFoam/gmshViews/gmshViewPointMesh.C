@@ -198,10 +198,8 @@ void gmshViewPointMesh<T1, T2>
 template class gmshViewPointMesh<double, scalar>;
 // double precision Gmsh view / pointVectorField
 template class gmshViewPointMesh<double, vector>;
-#if WITH_SYMMTENSOR
 // double precision Gmsh view / pointSymmTensorField
 template class gmshViewPointMesh<double, symmTensor>;
-#endif
 // double precision Gmsh view / pointTensorField
 template class gmshViewPointMesh<double, tensor>;
 

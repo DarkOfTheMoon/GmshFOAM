@@ -305,29 +305,27 @@ void polyMeshToGmsh::writeGmshMesh()
             int num;
             char name[256];
             getPhysicalName(num, name);
-            gmshMeshFile << num << " " << "\"" << name << "\"" << std::endl;
+            gmshMeshFile << num << " " << "\"" << name << "\"" << nl;
         }
-        gmshMeshFile << "$EndPhysicalNames" << std::endl;
+        gmshMeshFile << "$EndPhysicalNames" << nl;
     }
 
     // write nodes
     const label nVerts = getNVerts();
-    gmshMeshFile << "$Nodes" << std::endl
-        << nVerts << std::endl;
+    gmshMeshFile << "$Nodes" << nl << nVerts << nl;
     for(label vertI = 0; vertI < nVerts; vertI++)
     {
         int num;
         double xyz[3];
         getVertex(num, xyz[0], xyz[1], xyz[2]);
         gmshMeshFile << num << " " << xyz[0] << " " << xyz[1] << " " << xyz[2]
-            << std::endl;
+            << nl;
     }
-    gmshMeshFile << "$EndNodes" << std::endl;
+    gmshMeshFile << "$EndNodes" << nl;
 
     // write elements
     const label nElems = getNElems();
-    gmshMeshFile << "$Elements" << std::endl
-        << nElems << std::endl;
+    gmshMeshFile << "$Elements" << nl << nElems << nl;
     for(label elemI = 0; elemI < nElems; elemI++)
     {
         int num, type, physical, elementary, partition;
@@ -342,7 +340,7 @@ void polyMeshToGmsh::writeGmshMesh()
         {
             gmshMeshFile << indices[vertI] << " ";
         }
-        gmshMeshFile << indices[numVertices - 1] << std::endl;
+        gmshMeshFile << indices[numVertices - 1] << nl;
     }
     gmshMeshFile << "$EndElements" << std::endl;
     gmshMeshFile.close();

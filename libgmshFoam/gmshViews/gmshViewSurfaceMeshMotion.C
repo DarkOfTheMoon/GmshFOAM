@@ -27,11 +27,7 @@ Description
 
 #include "OFstream.H"
 #include "surfaceFields.H"
-#if WITH_FVSPATCHFIELD
 #include "fvsPatchField.H"
-#else
-#include "fvPatchField.H"
-#endif
 #include "gmshMessageStream.H"
 #include "gmshViewSurfaceMeshMotion.H"
 #include "gmshViews.H"

@@ -25,10 +25,7 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#include "gmshFoamConfig.H"
-
 #include "argList.H"
-
 #include "gmshMessageStream.H"
 #include "polyMeshToGmsh.H"
 
@@ -40,27 +37,19 @@ using namespace Foam;
 int main(int argc, char *argv[])
 {
     argList::noParallel();
-    argList::validOptions.insert("verbosity",
-    "verbosity (0-5; defaults to 3)");
+//     argList::validOptions.insert("verbosity", "verbosity (0-5; defaults to 3)");
 
-#   include "setRootCase.H"
-
-    gInfo << endl;
-
-#if WITH_NOREAD_TIME_CTOR
-    // with this Time object mesh can be written without system/ subdirectory
-    Time runTime(args.rootPath(), args.caseName());
-#else
-#   include "createTime.H"
-#endif
+    #include "setRootCase.H"
+    #include "createTime.H"
 
     label verbosity = 3; // along with the gmsh default setting of 3
-    if(args.options().found("verbosity"))
-    {
-        verbosity = readLabel(IStringStream(args.options()["verbosity"])());
-    }
+//     if(args.options().found("verbosity"))
+//     {
+//         verbosity = readLabel(IStringStream(args.options()["verbosity"])());
+//     }
 
-    gInfo(verbosity >= 3) << "Create mesh\n" << endl;
+    Info << "Create mesh\n" << endl;
+
     polyMeshToGmsh mesh
     (
         IOobject
@@ -74,7 +63,7 @@ int main(int argc, char *argv[])
 
     mesh.writeGmshMesh();
 
-    gInfo(verbosity >= 1) << endl << "End\n" << endl;
+    Info << nl << "End\n" << endl;
 
     return 0;
 }

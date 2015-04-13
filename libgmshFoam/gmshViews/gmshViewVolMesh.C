@@ -323,10 +323,8 @@ void gmshViewVolMesh<T1, T2>
 template class gmshViewVolMesh<double, scalar>;
 // double precision Gmsh view / volVectorField
 template class gmshViewVolMesh<double, vector>;
-#if WITH_SYMMTENSOR
 // double precision Gmsh view / volSymmTensorField
 template class gmshViewVolMesh<double, symmTensor>;
-#endif
 // double precision Gmsh view / volTensorField
 template class gmshViewVolMesh<double, tensor>;
 

@@ -46,8 +46,6 @@ namespace Foam
 
 // * * * * * * * * * * * * * * * * Static data   * * * * * * * * * * * * * * //
 
-#if WITH_SYMMTENSOR
-
 static const char *fieldClasses[]
 = {"volScalarField", "volVectorField", "volSymmTensorField", "volTensorField",
    "surfaceScalarField", "surfaceVectorField", "surfaceSymmTensorField",
@@ -55,17 +53,6 @@ static const char *fieldClasses[]
    "pointSymmTensorField", "pointTensorField"};
 
 const wordListFromCharArray gmshViews::fieldClasses_(12, fieldClasses);
-
-#else
-
-static const char *fieldClasses[]
-= {"volScalarField", "volVectorField", "volTensorField", "surfaceScalarField",
-   "surfaceVectorField", "surfaceTensorField", "pointScalarField",
-   "pointVectorField", "pointTensorField"};
-
-const wordListFromCharArray gmshViews::fieldClasses_(9, fieldClasses);
-
-#endif
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -475,13 +462,11 @@ gmshViewBase *gmshViews::getNextView()
         gV_ = new gmshViewVolMesh<double, vector>(*this,
         fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
     }
-#if WITH_SYMMTENSOR
     else if(fieldClasses_[classI_] == "volSymmTensorField")
     {
         gV_ = new gmshViewVolMesh<double, symmTensor>(*this,
         fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
     }
-#endif
     else if(fieldClasses_[classI_] == "volTensorField")
     {
         gV_ = new gmshViewVolMesh<double, tensor>(*this,
@@ -497,13 +482,11 @@ gmshViewBase *gmshViews::getNextView()
         gV_ = new gmshViewSurfaceMesh<double, vector>(*this,
         fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
     }
-#if WITH_SYMMTENSOR
     else if(fieldClasses_[classI_] == "surfaceSymmTensorField")
     {
         gV_ = new gmshViewSurfaceMesh<double, symmTensor>(*this,
         fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
     }
-#endif
     else if(fieldClasses_[classI_] == "surfaceTensorField")
     {
         gV_ = new gmshViewSurfaceMesh<double, tensor>(*this,
@@ -519,13 +502,11 @@ gmshViewBase *gmshViews::getNextView()
         gV_ = new gmshViewPointMesh<double, vector>(*this,
         fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
     }
-#if WITH_SYMMTENSOR
     else if(fieldClasses_[classI_] == "pointSymmTensorField")
     {
         gV_ = new gmshViewPointMesh<double, symmTensor>(*this,
         fieldNames_[classI_][fieldI_], runTime_, mesh_, verbosity_);
     }
-#endif
     else if(fieldClasses_[classI_] == "pointTensorField")
     {
         gV_ = new gmshViewPointMesh<double, tensor>(*this,
